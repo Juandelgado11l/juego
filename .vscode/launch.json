@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Cinematica",
+            "request": "launch",
+            "mainClass": "Cinematica",
+            "projectName": "juego_3b82d0d8"
+        },
+        {
+            "type": "java",
+            "name": "Launch Juego",
+            "request": "launch",
+            "mainClass": "Juego",
+            "vmArgs": "--module-path \"C:\\Users\\juanm\\Downloads\\openjfx-25.0.1_windows-x64_bin-sdk\\javafx-sdk-25.0.1\\lib\" --add-modules javafx.controls,javafx.media,javafx.swing"
+        }
+    ]
+}
