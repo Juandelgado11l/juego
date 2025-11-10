@@ -9,9 +9,9 @@ public class Obstaculos {
     // --- Propiedades de Posición y Visuales ---
     private int x;
     private int y;
-    private int ancho = 80;  
-    private int alto = 80;   
-    private Image sprite; // <-- Este es el objeto Image que necesitamos devolver
+    private int ancho = 180;  
+    private int alto = 180;  
+    private Image sprite; 
     private String nombreImagen; 
 
     // --- Propiedades de Juego ---
@@ -22,26 +22,41 @@ public class Obstaculos {
     
     // Cooldown de Ataque
     private long tiempoUltimoAtaque = 0;
-    private final long COOLDOWN_ATAQUE = 1000; 
+    private final long COOLDOWN_ATAQUE = 1200; 
     private boolean estaAtacandoAnimacion = false;
     private long finAnimacionAtaque = 0;
 
+    // ==========================================================
+    // CONSTRUCTOR 1 (3 ARGUMENTOS) - Para NO DESTRUCTIBLES (Fantasma, Planta Carnívora)
+    // ==========================================================
     public Obstaculos(int x, int y, String rutaSprite) {
         this.x = x;
         this.y = y;
         this.nombreImagen = rutaSprite;
         cargarSprite(rutaSprite);
         
-        if (rutaSprite.contains("fantasma")) {
-            this.esMovil = true;
-            this.vidaMaxima = 1;
-        } else if (rutaSprite.contains("plantas_carnivoras") || rutaSprite.contains("enredaderas")) {
-            this.vidaMaxima = 3;
-        } else {
-            this.vidaMaxima = 1;
-        }
+        // El fantasma es el único móvil aquí
+        this.esMovil = rutaSprite.contains("fantasma");
         
-        this.vidaActual = this.vidaMaxima;
+        // ✅ Fantasma y Planta Carnívora no son destructibles
+        this.vidaMaxima = 0; 
+        this.vidaActual = 0;
+    }
+    
+    // ==========================================================
+    // CONSTRUCTOR 2 (4 ARGUMENTOS) - Para DESTRUCTIBLES (Árbol, Enredadera)
+    // ==========================================================
+    public Obstaculos(int x, int y, String rutaSprite, int vidaInicial) {
+        this.x = x;
+        this.y = y;
+        this.nombreImagen = rutaSprite;
+        cargarSprite(rutaSprite);
+        
+        this.esMovil = rutaSprite.contains("fantasma"); // Aunque estos no deberían ser fantasmas
+        
+        // ✅ Destructibles con vida asignada
+        this.vidaMaxima = vidaInicial;
+        this.vidaActual = vidaInicial;
     }
 
     // --- Métodos de Dibujo y Actualización ---
@@ -65,23 +80,29 @@ public class Obstaculos {
         }
     }
     
-    public void dibujarBarraVida(Graphics g) {
-        if (vidaActual < vidaMaxima) {
+    // DENTRO DE LA CLASE Obstaculos.java
+
+        public void dibujarBarraVida(Graphics g) {
+     // ✅ CORRECCIÓN: Ahora se dibuja si vidaMaxima > 0, independientemente de la vidaActual.
+      if (vidaMaxima > 0) { 
             int barraAncho = ancho;
-            int barraAlto = 5;
+         int barraAlto = 5;
             int barraY = y - 10;
-            
-            g.setColor(Color.RED);
-            g.fillRect(x, barraY, barraAncho, barraAlto);
-            
-            g.setColor(Color.GREEN);
-            int vidaAncho = (int) ((double) vidaActual / vidaMaxima * barraAncho);
-            g.fillRect(x, barraY, vidaAncho, barraAlto);
-            
-            g.setColor(Color.BLACK);
-            g.drawRect(x, barraY, barraAncho, barraAlto);
-        }
+        
+         // Dibuja el fondo rojo (la vida máxima)
+         g.setColor(Color.RED);
+         g.fillRect(x, barraY, barraAncho, barraAlto);
+        
+          // Dibuja la parte verde (la vida actual)
+          g.setColor(Color.GREEN);
+          int vidaAncho = (int) ((double) vidaActual / vidaMaxima * barraAncho);
+          g.fillRect(x, barraY, vidaAncho, barraAlto);
+
+          // Dibuja el borde
+         g.setColor(Color.BLACK);
+         g.drawRect(x, barraY, barraAncho, barraAlto);
     }
+}
     
     public void actualizarEstado() {
         // Lógica de animación o estado específico del obstáculo
@@ -100,12 +121,14 @@ public class Obstaculos {
     }
     
     public void recibirDano(int dano) {
-        this.vidaActual -= dano;
-        if (this.vidaActual < 0) this.vidaActual = 0;
+        if (vidaMaxima > 0) {
+            this.vidaActual -= dano;
+            if (this.vidaActual < 0) this.vidaActual = 0;
+        }
     }
     
     public boolean estaDestruido() {
-        return vidaActual <= 0;
+        return vidaActual <= 0 && vidaMaxima > 0;
     }
     
     public boolean tieneVida() {
@@ -129,12 +152,10 @@ public class Obstaculos {
 
     // --- Getters y Setters ---
 
-    // ✅ MÉTODO CORREGIDO: getImagen() para la colisión pixel-perfect
     public Image getImagen() {
         return sprite;
     }
     
-    // ✅ MÉTODO CORREGIDO: getHitbox() solicitado
     public Rectangle getHitbox() {
         return getRect();
     }

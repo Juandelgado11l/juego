@@ -7,9 +7,9 @@ public class Controles extends KeyAdapter {
     private boolean isSaltando = false;
     private boolean isAtacando = false;
     private boolean isMoviendoDerecha = false;
-    private boolean isMoviendoIzquierda = false;
+    private boolean isMoviendoIzquierda = false; // RESTAURADA
 
-    // --- Métodos Getters ---
+    // --- Métodos Getters y Setters (Se mantienen sin cambios) ---
     
     public boolean isSaltando() {
         return isSaltando;
@@ -23,17 +23,10 @@ public class Controles extends KeyAdapter {
         return isMoviendoDerecha;
     }
 
-    public boolean isMoviendoIzquierda() {
+    public boolean isMoviendoIzquierda() { // Se usará para mover la posición X del personaje
         return isMoviendoIzquierda;
     }
 
-    // --- Métodos Setters (CRUCIAL para corregir el error) ---
-
-    /**
-     * Establece el estado de salto. 
-     * Este método es llamado por Tablero.java para resetear el flag después de iniciar un salto.
-     * @param isSaltando Nuevo estado de salto.
-     */
     public void setSaltando(boolean isSaltando) {
         this.isSaltando = isSaltando;
     }
@@ -49,21 +42,22 @@ public class Controles extends KeyAdapter {
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
         
-        // 🏃‍♂️ Movimiento
+        // 🏃‍♂️ Movimiento DERECHA
         if (key == KeyEvent.VK_RIGHT || key == KeyEvent.VK_D) {
             isMoviendoDerecha = true;
         }
+        // 🏃‍♂️ Movimiento IZQUIERDA (RESTAURADA)
         if (key == KeyEvent.VK_LEFT || key == KeyEvent.VK_A) {
             isMoviendoIzquierda = true;
         }
 
         // ⬆️ Salto
-        if (key == KeyEvent.VK_SPACE) {
-            isSaltando = true; // Se activa la bandera para que Tablero lo detecte
+        if (key == KeyEvent.VK_W) {
+            isSaltando = true;
         }
         
-        // 🗡️ Ataque (Asumimos la tecla J para atacar)
-        if (key == KeyEvent.VK_J) {
+        // 🗡️ Ataque
+        if (key == KeyEvent.VK_P) {
             isAtacando = true;
         }
     }
@@ -72,19 +66,22 @@ public class Controles extends KeyAdapter {
     public void keyReleased(KeyEvent e) {
         int key = e.getKeyCode();
         
-        // 🏃‍♂️ Movimiento
+        // 🏃‍♂️ Movimiento DERECHA
         if (key == KeyEvent.VK_RIGHT || key == KeyEvent.VK_D) {
             isMoviendoDerecha = false;
         }
+        // 🏃‍♂️ Movimiento IZQUIERDA (RESTAURADA)
         if (key == KeyEvent.VK_LEFT || key == KeyEvent.VK_A) {
             isMoviendoIzquierda = false;
         }
+          // 🏃‍♂️ Movimiento saltar (RESTAURADA)
+        if (key == KeyEvent.VK_SPACE || key == KeyEvent.VK_W) {
+            isSaltando = false;
+        }
 
         // 🗡️ Ataque 
-        if (key == KeyEvent.VK_J) {
-            isAtacando = false; // El ataque termina cuando se suelta la tecla
+        if (key == KeyEvent.VK_P) {
+            isAtacando = false; 
         }
-        
-        // Nota: La bandera 'isSaltando' se resetea en la clase Tablero, no aquí.
     }
 }
