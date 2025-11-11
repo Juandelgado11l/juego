@@ -20,9 +20,20 @@ public class Cinematica extends JFrame {
     private MediaView mediaView;
 
     private static final String RUTA_VIDEO = "src/video/intro_game.mp4";
+    
+    // 🌟 ADICIÓN: Referencia a la ventana de juego, para iniciarla al cargar partida.
+    private int idPartidaACargar = -1; 
+    
 
     public Cinematica() {
+        // Llama al constructor que permite pasar un ID de partida.
+        this(-1); 
+    }
+    
+    // 🌟 NUEVO CONSTRUCTOR para permitir cargar una partida (ID > -1)
+    public Cinematica(int idCarga) {
         super("Cinemática");
+        this.idPartidaACargar = idCarga;
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -30,8 +41,6 @@ public class Cinematica extends JFrame {
         // Barra de titulo arriba, maximizado, sin barra de tareas abajo
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setResizable(false);
-        // NO usar setUndecorated(true)
-        // porque eso quita la barra de título
 
         setLayout(new BorderLayout());
 
@@ -62,23 +71,37 @@ public class Cinematica extends JFrame {
                 mediaPlayer.setOnEndOfMedia(() -> {
                     SwingUtilities.invokeLater(() -> {
                         dispose();
-                        new Juego(); 
+                        // 🌟 IMPORTANTE: Pasamos el ID de la partida a la clase Juego
+                        new Juego(this.idPartidaACargar); 
                     });
                 });
 
             } catch (Exception e) {
                 System.out.println("Error al cargar video: " + e.getMessage());
+                // Si falla el video, saltamos directamente al juego.
                 SwingUtilities.invokeLater(() -> {
                     dispose();
-                    new Juego();
+                    new Juego(this.idPartidaACargar);
                 });
             }
         });
-
-        setVisible(true);
     }
 
+    /**
+     * 🏆 MÉTODO REQUERIDO: Inicia la cinemática.
+     * Esto resuelve el error "The method iniciar() is undefined".
+     */
+    public void iniciar() {
+        // En tu código, el constructor ya inicia casi todo,
+        // pero setVisible(true) es lo que hace visible la ventana.
+        // Lo movemos aquí para responder a la llamada `new Cinematica().iniciar();`
+        setVisible(true);
+    }
+    
+    // -----------------------------------------------------------
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new Cinematica());
+        // Si se ejecuta directamente, inicia una nueva cinemática (nueva partida)
+        SwingUtilities.invokeLater(() -> new Cinematica().iniciar()); 
     }
 }

@@ -12,36 +12,39 @@ public class Personaje {
     private final int ancho = 170;
     private final int alto = 170;
     private Image spriteActual;
-    
+
     // --- Estado de Movimiento y Acción ---
     private boolean mirandoDerecha = true;
-    private boolean isAtacando = false; 
-    private boolean estaRalentizado = false; 
+    private boolean isAtacando = false;
+    private boolean estaRalentizado = false;
     private boolean estaMoviendose = false;
-    
-    // 🌟 --- ESTADO DE HABILIDADES DESBLOQUEABLES (NUEVO) ---
-    private int saltosDisponibles = 1; // Contador actual de saltos
-    private int saltosMaximos = 1;      // Límite de saltos (1 o 2)
-    private int velocidadBase = 4;      // Velocidad base (4 o 6)
-    
+
+    // 🌟 --- Estado de Habilidades Desbloqueables ---
+    private int saltosDisponibles = 1; 
+    private int saltosMaximos = 1; 
+    private int velocidadBase = 4; 
+
+    // --- Estado de Vida ---
+    private int vida = 3;              // Vida actual en corazones
+    private final int vidaMaxima = 3;  // Máximo de corazones
+
+    // --- Rosas recogidas ---
+    private int rosasRecogidas = 0;
+
     // --- Animación y Sprites ---
     private final String SPRITE_MOVIMIENTO = "/img/caballeroC.gif";
-    private final String SPRITE_REPOSO = "/img/caballero1.gif"; 
+    private final String SPRITE_REPOSO = "/img/caballero1.gif";
     private final String SPRITE_ATAQUE = "/img/caballero_ataque.gif";
 
     public Personaje(int x, int y) {
         this.x = x;
         this.y = y;
-        cargarSprite("reposo"); 
+        cargarSprite("reposo");
     }
 
     // ----------------------------------------------------------------------
-    // --- MÉTODOS DE HABILIDAD DESBLOQUEABLE (LLAMADOS DESDE TABLERO) ---
+    // --- MÉTODOS DE HABILIDAD DESBLOQUEABLE ---
     // ----------------------------------------------------------------------
-
-    /**
-     * 👑 Desbloquea la habilidad de Doble Salto (otorgada por la Gárgola).
-     */
     public void desbloquearDobleSalto() {
         if (this.saltosMaximos < 2) {
             this.saltosMaximos = 2;
@@ -50,54 +53,35 @@ public class Personaje {
         }
     }
 
-    /**
-     * 👑 Aumenta permanentemente la velocidad de movimiento base (otorgada por la Neblina).
-     */
     public void aumentarVelocidad(int incremento) {
-        if (this.velocidadBase < 6) { 
-             this.velocidadBase += incremento; 
-             System.out.println("✅ Habilidad desbloqueada: Velocidad aumentada a " + this.velocidadBase);
+        if (this.velocidadBase < 6) {
+            this.velocidadBase += incremento;
+            System.out.println("✅ Habilidad desbloqueada: Velocidad aumentada a " + this.velocidadBase);
         }
     }
 
-    /**
-     * Resetea los saltos disponibles al tocar el suelo.
-     * (Llamado desde Tablero cuando enAire es false).
-     */
     public void resetearSaltos() {
         this.saltosDisponibles = this.saltosMaximos;
     }
-    
-    /**
-     * Consume un salto.
-     * (Llamado desde Tablero al ejecutar un salto).
-     */
+
     public void usarSalto() {
         this.saltosDisponibles--;
     }
-    
+
     // ----------------------------------------------------------------------
     // --- LÓGICA DE DIBUJO Y ANIMACIÓN ---
     // ----------------------------------------------------------------------
-
     public void dibujar(Graphics g, boolean esInvulnerable, long currentTime, ImageObserver observer) {
-        // Lógica de parpadeo por invulnerabilidad
-        if (esInvulnerable && (currentTime / 100) % 2 == 0) {
-            return; 
-        }
-        
-        // Lógica de reflejo (flip)
+        if (esInvulnerable && (currentTime / 100) % 2 == 0) return;
+
         if (!mirandoDerecha) {
-            // Dibuja reflejado
             g.drawImage(spriteActual, x + ancho, y, -ancho, alto, observer);
         } else {
-            // Dibuja normal
             g.drawImage(spriteActual, x, y, ancho, alto, observer);
         }
     }
-    
+
     public void actualizarEstado(Controles controles) {
-        // 1. Actualizar Dirección (MirandoDerecha)
         if (controles.isMoviendoDerecha()) {
             this.mirandoDerecha = true;
             this.estaMoviendose = true;
@@ -108,38 +92,36 @@ public class Personaje {
             this.estaMoviendose = false;
         }
 
-        // 2. Seleccionar el Sprite (Jerarquía de Animación)
         if (isAtacando) {
-            cargarSprite("atacando"); 
+            cargarSprite("atacando");
         } else if (estaMoviendose) {
-            cargarSprite("movimiento"); 
+            cargarSprite("movimiento");
         } else {
-            // Reposo
-            cargarSprite("reposo"); 
+            cargarSprite("reposo");
         }
     }
-    
+
     private void cargarSprite(String estado) {
         String path;
-        
+
         if (estado.equals("atacando")) {
             path = SPRITE_ATAQUE;
         } else if (estado.equals("movimiento")) {
             path = SPRITE_MOVIMIENTO;
         } else {
-            path = SPRITE_REPOSO; 
+            path = SPRITE_REPOSO;
         }
-        
+
         try {
             Image nuevaImagen = new ImageIcon(getClass().getResource(path)).getImage();
-            
+
             if (nuevaImagen == null) {
                 System.err.println("Advertencia: No se encontró el sprite para '" + estado + "'. Usando " + SPRITE_MOVIMIENTO);
-                path = SPRITE_MOVIMIENTO; 
+                path = SPRITE_MOVIMIENTO;
                 nuevaImagen = new ImageIcon(getClass().getResource(path)).getImage();
             }
-            
-            if (spriteActual != nuevaImagen) { // Solo actualizar si el sprite ha cambiado
+
+            if (spriteActual != nuevaImagen) {
                 spriteActual = nuevaImagen;
             }
         } catch (Exception e) {
@@ -147,33 +129,59 @@ public class Personaje {
             System.err.println("Verifica que la ruta sea correcta y que los archivos existan.");
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // --- MÉTODOS GETTERS/SETTERS ---
     // ----------------------------------------------------------------------
-    
     public Image getImagen() { return spriteActual; }
     public Rectangle getHitbox() { return new Rectangle(x, y, ancho, alto); }
-    
+
     public int getX() { return x; }
     public void setX(int x) { this.x = x; }
     public int getY() { return y; }
     public void setY(int y) { this.y = y; }
     public int getAncho() { return ancho; }
     public int getAlto() { return alto; }
-    
+
     public boolean estaAtacando() { return isAtacando; }
     public void setAtacando(boolean isAtacando) { this.isAtacando = isAtacando; }
 
     public boolean isMirandoDerecha() { return mirandoDerecha; }
-    
+
     public boolean getEstaRalentizado() { return estaRalentizado; }
     public void setEstaRalentizado(boolean estaRalentizado) { this.estaRalentizado = estaRalentizado; }
-    
+
     public boolean estaMoviendose() { return estaMoviendose; }
-    
-    // --- Getters para Habilidades ---
+
+    // --- Vida ---
+    public int getVida() { return vida; }
+    public void setVida(int vida) {
+        if (vida < 0) this.vida = 0;
+        else if (vida > vidaMaxima) this.vida = vidaMaxima;
+        else this.vida = vida;
+    }
+    public void perderCorazon() { setVida(vida - 1); }
+    public void ganarCorazon() { setVida(vida + 1); }
+    public int getVidaMaxima() { return vidaMaxima; }
+
+    // --- Rosas recogidas ---
+    public int getRosasRecogidas() { return rosasRecogidas; }
+    public void setRosasRecogidas(int rosasRecogidas) {
+        if (rosasRecogidas < 0) this.rosasRecogidas = 0;
+        else this.rosasRecogidas = rosasRecogidas;
+    }
+    public void recogerRosa() { rosasRecogidas++; }
+    public void perderRosas(int cantidad) { setRosasRecogidas(rosasRecogidas - cantidad); }
+
+    // --- Getters para habilidades ---
     public int getVelocidadBase() { return velocidadBase; }
     public int getSaltosDisponibles() { return saltosDisponibles; }
     public int getSaltosMaximos() { return saltosMaximos; }
+
+    // --- Setters para carga de partida ---
+    public void setVelocidadBase(int nuevaVelocidad) { this.velocidadBase = nuevaVelocidad; }
+    public void setSaltosMaximos(int maxSaltos) { 
+        this.saltosMaximos = maxSaltos; 
+        this.saltosDisponibles = maxSaltos; 
+    }
 }

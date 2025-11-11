@@ -3,6 +3,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "MenuPrincipal",
+            "request": "launch",
+            "mainClass": "MenuPrincipal",
+            "projectName": "juego_3b82d0d8"
+        },
+        {
+            "type": "java",
             "name": "Cinematica",
             "request": "launch",
             "mainClass": "Cinematica",

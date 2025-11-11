@@ -5,28 +5,38 @@ import java.sql.SQLException;
 public class ConexionBD {
     
     // ⚠️ Reemplaza estos valores con tu configuración real de SQL Server
-    private static final String URL_SERVIDOR = "localhost"; // O la IP/Nombre de tu servidor
+    // Usamos 'JUANDG' que es el nombre de tu servidor, no 'localhost'
+    private static final String URL_SERVIDOR = "JUANDG"; 
     private static final int PUERTO = 1433; // Puerto TCP por defecto de SQL Server
-    private static final String NOMBRE_DB = "GameSaveDB"; // Nombre de la base de datos
-    private static final String USUARIO = "SA"; // O tu usuario
-    private static final String CONTRASENA = "TuContrasenaSegura"; // Tu contraseña
+    private static final String NOMBRE_BD = "GameSaveBD"; // Nombre de la base de datos
+
+    // Nombre de la clase del driver
+    private static final String DRIVER_CLASS = "com.microsoft.sqlserver.jdbc.SQLServerDriver"; 
 
     // URL de conexión completa para el driver JDBC
-    private static final String JDBC_URL = 
+    private static final String JBDC_URL = 
         "jdbc:sqlserver://" + URL_SERVIDOR + ":" + PUERTO + 
-        ";databaseName=" + NOMBRE_DB + 
-        ";user=" + USUARIO + 
-        ";password=" + CONTRASENA + 
-        // Es posible que necesites agregar más propiedades como integratedSecurity=true o encrypt=true 
+        ";databaseName=" + NOMBRE_BD + 
+        ";integratedSecurity=true" + 
         ";trustServerCertificate=true;"; 
 
     public static Connection conectar() {
         Connection conexion = null;
         try {
+            // 🌟 CORRECCIÓN CLAVE: Forzamos la carga del driver JDBC 🌟
+            // Esto resuelve el error "No suitable driver found"
+            Class.forName(DRIVER_CLASS); 
+            
             // Establece la conexión
-            conexion = DriverManager.getConnection(JDBC_URL);
+            conexion = DriverManager.getConnection(JBDC_URL);
             System.out.println("Conexión exitosa a la base de datos.");
+            
+        } catch (ClassNotFoundException e) {
+            // Se lanza si el driver no se encuentra en el ClassPath (aunque ya lo pusiste, es buena práctica)
+            System.err.println("Error: Driver JDBC no encontrado. Asegúrate de que el archivo JAR esté en el Classpath.");
+            e.printStackTrace();
         } catch (SQLException e) {
+            // Se lanza si hay un error de conexión (e.g., servidor no levantado, TCP/IP deshabilitado)
             System.err.println("Error al conectar con la base de datos: ");
             e.printStackTrace();
         }

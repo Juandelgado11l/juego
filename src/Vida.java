@@ -34,7 +34,38 @@ public class Vida {
         }
     }
     
+    // ----------------------------------------------------------------------
+    // 💾 ADICIONES REQUERIDAS PARA CARGAR PARTIDA 💾
+    // ----------------------------------------------------------------------
+
+    /**
+     * 💾 Establece la vida actual del personaje (utilizado al cargar una partida).
+     * @param vida La cantidad de vida a restaurar.
+     */
+    public void setVidaActual(int vida) {
+        // Asegura que la vida esté dentro del rango [0, vidaMaxima]
+        if (vida >= 0) {
+            this.vidaActual = Math.min(vida, this.vidaMaxima);
+        } else {
+            this.vidaActual = 0;
+        }
+    }
+    
+    /**
+     * Establece la vida máxima (útil si la vida máxima cambia con mejoras).
+     * @param vida La nueva vida máxima.
+     */
+    public void setVidaMaxima(int vida) {
+        this.vidaMaxima = vida;
+        // Si la vida actual excede la nueva máxima, la ajustamos.
+        if (this.vidaActual > this.vidaMaxima) {
+            this.vidaActual = this.vidaMaxima;
+        }
+    }
+    
+    // ----------------------------------------------------------------------
     // --- Métodos de Control ---
+    // ----------------------------------------------------------------------
     
     /**
      * Quita una cantidad de vida al personaje.
@@ -99,4 +130,5 @@ public class Vida {
     public int getVidaMaxima() {
         return vidaMaxima;
     }
+    
 }

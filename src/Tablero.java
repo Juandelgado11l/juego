@@ -4,7 +4,8 @@ import java.util.Iterator;
 import java.util.Random;
 import javax.swing.*;
 
-public class Tablero extends JPanel {
+// 🌟 ADICIÓN: Implementa Runnable para el game loop
+public class Tablero extends JPanel implements Runnable {
 
     private Image fondo;
     private Image suelo;
@@ -19,7 +20,7 @@ public class Tablero extends JPanel {
 
     private int xFondo = 0;
     private int xSuelo = 0;
-    
+    private boolean cinematicaTerminada = false; // Asume 'false' al iniciar nueva partida
     private int velocidadY = 0;
     private final int gravedad = 2;
     private final int fuerzaSalto = -26;
@@ -80,35 +81,184 @@ public class Tablero extends JPanel {
     private final String NEBLINA_SPRITE = "/img/neblina.gif"; 
     private final String CABALLERO_SPRITE = "/img/caballero_oscuro.gif"; 
     private final String VAMPIRO_SPRITE = "/img/vampiro.gif"; 
+    
+    // ----------------------------------------------------------------------
+    // 🌟 ADICIÓN: VARIABLES PARA CARGA DE PARTIDA
+    // ----------------------------------------------------------------------
+    private int idPartidaACargar = -1; // -1 significa iniciar nueva partida
+    private PartidaDAO partidaDAO = new PartidaDAO(); // Instancia del DAO
 
-    public Tablero() {
+    // ----------------------------------------------------------------------
+    // 1. CONSTRUCTOR
+    // ----------------------------------------------------------------------
+    public Tablero(int idPartidaACargar) {
         setBackground(Color.BLACK);
         setFocusable(true);
         
+        // Inicializa componentes
         vida = new Vida();
-
+        sonido.loopSonido("juego");
         try {
             gifUI = new ImageIcon(getClass().getResource("/img/flor.gif")).getImage(); 
             fondo = new ImageIcon(getClass().getResource("/img/fondoPrincipal.png")).getImage();
             suelo = new ImageIcon(getClass().getResource("/img/suelo.png")).getImage();
         } catch (Exception e) {
-            System.err.println("ERROR cargando imágenes en Tablero: " + e.getMessage());
-        }
-
-        sonido.loopSonido("juego");
-        
-        if (rosas.isEmpty()) {
-            ultimoXRosa = 300;
+            System.err.println("ERROR cargando imágenes: " + e.getMessage());
         }
         
-        caballeroC = new Personaje(100, 100);
+        // Inicialización básica del Personaje.
+        caballeroC = new Personaje(100, 100); 
         enAire = true;
         velocidadY = 1;
 
         controles = new Controles();
         addKeyListener(controles);
+
+        this.idPartidaACargar = idPartidaACargar; // Guarda el ID en la variable de instancia
+    }
+
+    // ----------------------------------------------------------------------
+    // 2. MÉTODO INICIAR JUEGO (Lógica de Nueva Partida vs. Carga)
+    // ----------------------------------------------------------------------
+    public void iniciarJuego() {
+    
+        if (caballeroC == null) {
+            caballeroC = new Personaje(100, 100);
+        }
+        
+        boolean esPartidaNueva = (idPartidaACargar <= 0);
+        
+        if (!esPartidaNueva) {
+            // Intenta cargar los datos de la base de datos
+            if (cargarEstadoDelJuego(idPartidaACargar)) {
+                System.out.println("Partida cargada con éxito.");
+            } else {
+                // La carga falló, iniciar nueva partida
+                System.err.println("Carga de partida fallida. Reiniciando estados.");
+                esPartidaNueva = true;
+            }
+        }
+        
+        if (esPartidaNueva) {
+            // Reinicializa/Establece estados clave para una PARTIDA NUEVA
+            Tablero.contador = 0;
+            vida.setVidaActual(3); 
+            caballeroC.setSaltosMaximos(1); 
+            caballeroC.setVelocidadBase(4); 
+            this.cinematicaTerminada = false;
+            
+            // Fija la posición inicial (X y Y) del personaje SOLO si es partida nueva
+            caballeroC.setX(100);
+            caballeroC.setY(100); 
+        }
+        
+        // Aplicar la Posición Y (ajusta a suelo si es necesario, respeta Y cargada)
+        setPersonajeY(caballeroC); 
+
+        // Iniciar el game loop
+        Thread gameThread = new Thread(this);
+        gameThread.start();
     }
     
+    // ----------------------------------------------------------------------
+    // 3. LÓGICA DE CARGA Y GUARDADO (CORREGIDA)
+    // ----------------------------------------------------------------------
+    
+    /**
+     * 💾 Carga los datos de la base de datos y restaura el estado del juego.
+     * @param idPartida El ID de la fila a cargar.
+     * @return true si la carga fue exitosa.
+     */
+    public boolean cargarEstadoDelJuego(int idPartida) {
+        // CORRECCIÓN: PartidaDAO.cargarPartida devuelve 7 datos
+        int[] datosCargados = partidaDAO.cargarPartida(idPartida);
+
+        if (datosCargados != null && datosCargados.length == 7) {
+            // Orden de los datos: [rosas, vida, saltos, velocidad, posX, posY, cinematica]
+            
+            Tablero.contador = datosCargados[0];        // 0. ROSA_CONTADOR
+            vida.setVidaActual(datosCargados[1]);       // 1. VIDA_ACTUAL
+            caballeroC.setSaltosMaximos(datosCargados[2]); // 2. SALTO_MAXIMO
+            caballeroC.setVelocidadBase(datosCargados[3]); // 3. VELOCIDAD_BASE
+            caballeroC.setX(datosCargados[4]);          // 4. POS_X
+            caballeroC.setY(datosCargados[5]);          // 5. POS_Y
+            
+            int cinematicaInt = datosCargados[6];       // 6. CINEMATICA_TERMINADA
+            this.cinematicaTerminada = (cinematicaInt == 1);
+            
+            return true;
+        } else {
+            System.err.println("Error al cargar datos para el ID: " + idPartida + ". Formato incorrecto.");
+            return false;
+        }
+    }
+
+    
+    /**
+     * 💾 Guarda el estado actual del juego.
+     * @param nombreSlot El nombre para identificar la partida guardada.
+     * @return true si el guardado fue exitoso.
+     */
+    public boolean guardarEstadoDelJuego(String nombreSlot) {
+        
+        // Obtener los 8 datos del estado actual
+        int rosas = Tablero.contador; 
+        int vidaActual = vida.getVidaActual(); 
+        int saltosMaximos = caballeroC.getSaltosMaximos(); 
+        int velocidadBase = caballeroC.getVelocidadBase(); 
+        
+        // CORRECCIÓN: Se añaden los 3 parámetros faltantes (POS_X, POS_Y, CINEMATICA)
+        int posX = caballeroC.getX(); 
+        int posY = caballeroC.getY(); 
+        int cinematicaInt = this.cinematicaTerminada ? 1 : 0; 
+        
+        // Usar el DAO para insertar/actualizar (8 argumentos)
+        return partidaDAO.guardarPartida(
+            nombreSlot, 
+            rosas, 
+            vidaActual, 
+            saltosMaximos, 
+            velocidadBase,
+            posX,
+            posY,
+            cinematicaInt 
+        );
+    }
+
+    // ----------------------------------------------------------------------
+    // 4. IMPLEMENTACIÓN DEL BUCLE DE JUEGO (RUNNABLE)
+    // ----------------------------------------------------------------------
+    @Override
+    public void run() {
+        // Lógica de bucle de juego (Game Loop)
+        long ultimaActualizacion = System.nanoTime();
+        final double FPS = 60.0;
+        final double tiempoPorFrame = 1000000000 / FPS;
+        double delta = 0;
+        
+        while (true) {
+            long ahora = System.nanoTime();
+            delta += (ahora - ultimaActualizacion) / tiempoPorFrame;
+            ultimaActualizacion = ahora;
+            
+            if (delta >= 1) {
+                actualizar(); // Llama a tu método existente
+                repaint();
+                delta--;
+            }
+            
+            try {
+                Thread.sleep(1); 
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+
+    // ----------------------------------------------------------------------
+    // 5. PAINT COMPONENT
+    // ----------------------------------------------------------------------
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -162,7 +312,7 @@ public class Tablero extends JPanel {
     }
     
     // -------------------------------------------------------------------------
-    // --- LÓGICA DE JUEGO PRINCIPAL ---
+    // 6. LÓGICA DE JUEGO PRINCIPAL (ACTUALIZAR)
     // -------------------------------------------------------------------------
 
     public void actualizar() {
@@ -183,15 +333,12 @@ public class Tablero extends JPanel {
         }
 
         // 👑 LÓGICA DEL DOBLE SALTO 👑
-        // Permite saltar si el control está activado Y tiene saltos disponibles (> 0)
         if (controles.isSaltando() && caballeroC.getSaltosDisponibles() > 0) {
             
-            // Si es el primer salto (no estaba en el aire), establece enAire a true.
             if (!enAire) {
                 enAire = true;
             } 
             
-            // Aplica la fuerza de salto
             velocidadY = fuerzaSalto;
             caballeroC.usarSalto(); // Consume un salto
             sonido.reproducirSonido("salto");
@@ -206,10 +353,7 @@ public class Tablero extends JPanel {
         caballeroC.actualizarEstado(controles);
         
         // 🌟 LÓGICA DE MOVIMIENTO HORIZONTAL Y SCROLL 
-        // ➡️ Usa la velocidad base del Personaje (que puede ser 4 o 6)
         int velocidadBase = caballeroC.getVelocidadBase();
-        
-        // ➡️ Aplica la ralentización si está activa (ej. a VELOCIDAD_RALENTIZADA = 1)
         int velocidadActual = estaRalentizado ? VELOCIDAD_RALENTIZADA : velocidadBase;
         
         int velocidadX = 0; 
@@ -314,7 +458,7 @@ public class Tablero extends JPanel {
     }
     
     // -------------------------------------------------------------------------
-    // --- MÉTODOS AUXILIARES Y DE JUEGO (CLAVE) ---
+    // 7. MÉTODOS AUXILIARES Y DE JUEGO (Colisiones, Generación, etc.)
     // -------------------------------------------------------------------------
 
     private void limpiarElementos() {
@@ -359,7 +503,7 @@ public class Tablero extends JPanel {
         }
         
         if (rosas.isEmpty() && contador < 10 && ultimoXRosa < getWidth()) {
-             ultimoXRosa = getWidth() + 10;
+              ultimoXRosa = getWidth() + 10;
         }
     }
 
@@ -534,7 +678,7 @@ public class Tablero extends JPanel {
 
             int xPosicion = ultimoXObstaculoMovil + ESPACIO_CONSECUTIVO; 
             
-            enemigos.add(new Obstaculos(xPosicion, yObs, "/img/fantasma.gif"));
+            enemigos.add(new Obstaculos(xPosicion, yObs, "/img/obstaculo.gif"));
 
             ultimoXObstaculoMovil = xPosicion; 
             obstaculosMovilesConsecutivos++;
@@ -551,7 +695,7 @@ public class Tablero extends JPanel {
         }
         
         if (ultimoXObstaculoFijo < getWidth()) {
-             ultimoXObstaculoFijo = getWidth() + 10;
+              ultimoXObstaculoFijo = getWidth() + 10;
         }
         
         if (obstaculosFijosConsecutivos >= 1) {
@@ -723,24 +867,87 @@ public class Tablero extends JPanel {
                     }
                 }
             }
-        }
+        } 
         
+        // 🛑 Lógica para aplicar el estado de ralentización al personaje
         if (caballeroC != null) {
             caballeroC.setEstaRalentizado(estaRalentizado);
         }
     }
+
     
-    public void setPersonaje(Personaje c) {
-        this.caballeroC = c;
+    public void setPersonajeY(Personaje c) {
+        if (this.caballeroC == null) {
+            this.caballeroC = c;
+        }
         
         if (this.caballeroC != null) {
-            if (getHeight() > 0) {
-                 final int sueloY = getHeight() - caballeroC.getAlto() - 20;
-                 this.caballeroC.setY(sueloY);
+            // Corrige la Y si está muy por encima del suelo.
+            final int sueloY = getHeight() - caballeroC.getAlto() - 20; 
+            
+            if (getHeight() > 0 && this.caballeroC.getY() < sueloY - 10) { 
+                this.caballeroC.setY(sueloY);
             }
             
             this.enAire = false;
             this.velocidadY = 0;
         }
     }
-}
+    
+    // -------------------------------------------------------------------------
+    // --- MÉTODOS GETTERS/SETTERS PÚBLICOS ---
+    // -------------------------------------------------------------------------
+
+    /**
+     * Establece el objeto Personaje principal.
+     */
+    public void setPersonaje(Personaje c) {
+        this.caballeroC = c;
+        
+        if (this.caballeroC != null) {
+            if (getHeight() > 0) {
+                final int sueloY = getHeight() - caballeroC.getAlto() - 20;
+                this.caballeroC.setY(sueloY);
+            }
+            
+            this.enAire = false;
+            this.velocidadY = 0;
+        }
+    }
+    
+    /**
+     * Obtiene la instancia del objeto Personaje principal (el jugador).
+     * @return El objeto Personaje.
+     */
+    public Personaje getJugador() {
+        return this.caballeroC;
+    }
+
+    /**
+     * Obtiene la velocidad base del personaje (la que tiene almacenada).
+     * @return Velocidad base.
+     */
+    public int getVelocidadBase() {
+        if (caballeroC != null) {
+            return caballeroC.getVelocidadBase();
+        }
+        return 4; // Valor por defecto en caso de que el personaje no exista aún
+    }
+
+    /**
+     * Obtiene el objeto Vida para consultar o modificar la vida.
+     * @return El objeto Vida.
+     */
+    public Vida getVidaObjeto() {
+        return this.vida;
+    }
+    
+    /**
+     * Obtiene la cantidad de rosas recogidas.
+     * @return Número de rosas (variable estática Tablero.contador).
+     */
+    public int getRosasRecogidas() {
+        return Tablero.contador; 
+    }
+
+} // Fin de la clase Tablero

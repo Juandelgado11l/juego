@@ -1,40 +1,92 @@
-import javax.swing.JFrame;
+// Archivo: Juego.java (CORREGIDO)
 
-public class Juego extends JFrame implements Runnable {
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+
+public class Juego extends JFrame {
 
     private Tablero tablero;
-    private Thread hilo;
-
+    
+    // --- Constructor 1: NUEVA PARTIDA ---
     public Juego() {
-        setTitle("Mi Juego");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        // ✅ EXACTAMENTE COMO TU JUEGO ORIGINAL:
-        // barra arriba, maximizado, sin barra de tareas
+        this(-1);
+    }
+    
+    // --- Constructor 2: CARGAR PARTIDA ---
+    public Juego(int idPartidaACargar) {
+        setTitle("Caballero Eterno");
+        
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setResizable(false);
-        // NO usar setUndecorated(true)
-
-        tablero = new Tablero();
+        
+        // Crear el tablero
+        tablero = new Tablero(idPartidaACargar);
         add(tablero);
 
+        // Listener para guardar al cerrar
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                manejarCierreYGuardado();
+            }
+        });
+
         setVisible(true);
-
-        iniciarHilo();
+        tablero.iniciarJuego();
     }
 
-    private void iniciarHilo() {
-        hilo = new Thread(this);
-        hilo.start();
-    }
+    /**
+     * Pregunta si desea guardar antes de cerrar y DELEGA el guardado al Tablero.
+     */
+    private void manejarCierreYGuardado() {
+        
+        int opcion = JOptionPane.showConfirmDialog(
+            this, 
+            "¿Deseas guardar la partida antes de salir?", 
+            "Confirmar Salida", 
+            JOptionPane.YES_NO_CANCEL_OPTION
+        );
 
-    @Override
-    public void run() {
-        while (true) {
-            try { Thread.sleep(17); } catch (Exception e) {}
+        if (opcion == JOptionPane.YES_OPTION) {
 
-            tablero.actualizar();
-            tablero.repaint();
+            String nombrePartida = JOptionPane.showInputDialog(
+                this,
+                "Introduce el nombre para la partida:",
+                "Guardar Partida",
+                JOptionPane.PLAIN_MESSAGE
+            );
+            
+            if (nombrePartida != null && !nombrePartida.trim().isEmpty()) {
+                
+                // 🛑 ¡ESTE ES EL CAMBIO CLAVE! 
+                // Ya NO llamas a PartidaDAO directamente.
+                // Llamas a tablero.guardarEstadoDelJuego(), que se encarga de llamar al DAO con los 8 argumentos.
+                boolean guardado = tablero.guardarEstadoDelJuego(nombrePartida);
+                
+                if (guardado) {
+                    JOptionPane.showMessageDialog(
+                        this, 
+                        "Partida guardada con éxito.", 
+                        "Guardado", 
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                } else {
+                    JOptionPane.showMessageDialog(
+                        this, 
+                        "Error al guardar la partida.", 
+                        "Error de Guardado", 
+                        JOptionPane.ERROR_MESSAGE
+                    );
+                }
+
+                dispose(); 
+            }
+
+        } else if (opcion == JOptionPane.NO_OPTION) {
+            dispose();
         }
     }
 }
