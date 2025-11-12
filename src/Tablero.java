@@ -59,6 +59,7 @@ private volatile boolean cinematicaTerminada = false; // CLAVE: 'volatile' para 
     private final int DAGA_ANCHO = 90;
     private final int DAGA_ALTO = 30;
     private final String DAGA_SPRITE = "/img/daga.jpg"; 
+    private Image fondoControles;
     private final int DAGA_VELOCIDAD = 9;
     private final int RANGO_LANZAMIENTO_ENREDADERA = 250;
     private final long INVULNERABILITY_DURATION = 1500;
@@ -89,6 +90,7 @@ private volatile boolean cinematicaTerminada = false; // CLAVE: 'volatile' para 
     // ----------------------------------------------------------------------
     private int idPartidaACargar = -1; // -1 significa iniciar nueva partida
     private PartidaDAO partidaDAO = new PartidaDAO(); // Instancia del DAO
+    int x = getWidth() / 5; // antes era getWidth() / 4
 
     // ----------------------------------------------------------------------
     // 1. CONSTRUCTOR
@@ -96,6 +98,12 @@ private volatile boolean cinematicaTerminada = false; // CLAVE: 'volatile' para 
     public Tablero(int idPartidaACargar) {
     setBackground(Color.BLACK);
     setFocusable(true);
+
+     try {
+        fondoControles = new ImageIcon(getClass().getResource("/img/fondoControles.png")).getImage();
+    } catch (Exception e) {
+        System.err.println("Error cargando imagen de controles: " + e.getMessage());
+    }
     
     vida = new Vida();
     sonido.loopSonido("juego");
@@ -228,31 +236,43 @@ public void iniciarJuego() {
      * @param nombreSlot El nombre para identificar la partida guardada.
      * @return true si el guardado fue exitoso.
      */
-    public boolean guardarEstadoDelJuego(String nombreSlot) {
-        
-        // Obtener los 8 datos del estado actual
-        int rosas = Tablero.contador; 
-        int vidaActual = vida.getVidaActual(); 
-        int saltosMaximos = caballeroC.getSaltosMaximos(); 
-        int velocidadBase = caballeroC.getVelocidadBase(); 
-        
-        // CORRECCIÓN: Se añaden los 3 parámetros faltantes (POS_X, POS_Y, CINEMATICA)
-        int posX = caballeroC.getX(); 
-        int posY = caballeroC.getY(); 
-        int cinematicaInt = this.cinematicaTerminada ? 1 : 0; 
-        
-        // Usar el DAO para insertar/actualizar (8 argumentos)
-        return partidaDAO.guardarPartida(
-            nombreSlot, 
-            rosas, 
-            vidaActual, 
-            saltosMaximos, 
-            velocidadBase,
-            posX,
-            posY,
-            cinematicaInt 
-        );
+ public boolean guardarEstadoDelJuego(String nombreSlot) {
+
+    // Obtener los 8 datos del estado actual
+    int rosas = Tablero.contador; 
+    int vidaActual = vida.getVidaActual(); 
+    int saltosMaximos = caballeroC.getSaltosMaximos(); 
+    int velocidadBase = caballeroC.getVelocidadBase(); 
+    int posX = caballeroC.getX(); 
+    int posY = caballeroC.getY(); 
+    int cinematicaInt = this.cinematicaTerminada ? 1 : 0; 
+
+    // Verificar si ya existe una partida con ese nombre
+    if (partidaDAO.existeNombre(nombreSlot)) {
+        int opcion = javax.swing.JOptionPane.showConfirmDialog(null,
+            "Ya hay una partida con ese nombre, ¿Deseas sobrescribir?",
+            "Confirmar",
+            javax.swing.JOptionPane.YES_NO_OPTION);
+
+        if (opcion == javax.swing.JOptionPane.NO_OPTION) {
+            return false; // El usuario no quiere sobrescribir
+        }
+        // Si dijo sí, sigue y sobrescribe
     }
+
+    // Guardar partida (insertar o sobrescribir)
+    return partidaDAO.guardarPartida(
+        nombreSlot, 
+        rosas, 
+        vidaActual, 
+        saltosMaximos, 
+        velocidadBase,
+        posX,
+        posY,
+        cinematicaInt 
+    );
+}
+
 
     // ----------------------------------------------------------------------
     // 4. IMPLEMENTACIÓN DEL BUCLE DE JUEGO (RUNNABLE)
@@ -292,31 +312,17 @@ public void iniciarJuego() {
 protected void paintComponent(Graphics g) {
     super.paintComponent(g);
 
-    // DEBUG: Ver estado real
-    System.out.println("DEBUG DIBUJO: C.T. = " + this.cinematicaTerminada);
-
-    // --- 1. SI LA CINEMÁTICA NO HA TERMINADO → DIBUJAR SOLO LA CINEMÁTICA ---
-    if (!this.cinematicaTerminada) {
-
-        // Fondo negro
-        g.setColor(Color.BLACK);
-        g.fillRect(0, 0, getWidth(), getHeight());
-
-        // Texto (simulación de cinemática)
-        g.setColor(Color.RED);
-        g.setFont(new Font("Serif", Font.BOLD, 50));
-        g.drawString("CINEMÁTICA DE INTRODUCCIÓN",
-                     getWidth() / 2 - 350, getHeight() / 2);
-
-        return; // *** CRÍTICO *** evita dibujar el juego por error
+    if (!cinematicaTerminada) {
+        // Dibuja la cinemática visible (puedes reemplazar con imágenes, animaciones o texto)
+        dibujarCinematica(g);
+        return; // evita dibujar el juego mientras corre la cinemática
     }
 
-    // --- 2. SI LA CINEMÁTICA TERMINÓ → DIBUJAR JUEGO NORMAL ---
-
+    // --- JUEGO NORMAL ---
     int altoSuelo = 20;
     int ySuelo = getHeight() - altoSuelo;
 
-    // Fondo (paralaje)
+    // Fondo con paralaje
     g.drawImage(fondo, xFondo, 0, getWidth(), getHeight(), this);
     g.drawImage(fondo, xFondo + getWidth(), 0, getWidth(), getHeight(), this);
 
@@ -361,6 +367,67 @@ protected void paintComponent(Graphics g) {
         for (Rosa r : rosas) r.dibujar(g);
     }
 }
+
+private void dibujarCinematica(Graphics g) {
+    // Ejemplo: dibujar un fondo negro con texto
+    g.setColor(Color.BLACK);
+    g.fillRect(0, 0, getWidth(), getHeight());
+
+    g.setColor(Color.WHITE);
+    g.setFont(new Font("Arial", Font.BOLD, 60));
+    g.setColor(Color.WHITE);
+      if (!cinematicaTerminada) {
+    mostrarPantallaControles(g);
+    return;
+}
+
+}
+private long tiempoControles = 5000; // 3 segundos
+private long inicioControles;
+
+private void mostrarPantallaControles(Graphics g) {
+    // Fondo
+    if (fondoControles != null) {
+        g.drawImage(fondoControles, 0, 0, getWidth(), getHeight(), this);
+    }
+
+    // Texto
+    g.setColor(Color.WHITE);
+    g.setFont(new Font("Arial", Font.BOLD, 40));
+    g.drawString("Controles:", getWidth() / 8, getHeight() / 4 - 40);
+
+    g.setFont(new Font("Arial", Font.PLAIN, 30));
+    int x = getWidth() / 8;      // 🔹 Más a la izquierda
+    int y = getHeight() / 2 - 140; // Altura perfecta
+
+    g.drawString("Arriba: W", x, y);
+    g.drawString("Izquierda: A", x, y + 40);
+    g.drawString("Derecha: D", x, y + 80);
+    g.drawString("Pegar: P", x, y + 120);
+
+    // Control del tiempo
+   if (System.currentTimeMillis() - inicioControles >= tiempoControles) {
+    cinematicaTerminada = true;
+
+    if (caballeroC != null) {
+        // 🔽 Forzar posición exacta en el suelo
+        int altoSuelo = 20; // igual al que usas en paintComponent
+        int ySuelo = getHeight() - altoSuelo;
+        int alturaPersonaje = caballeroC.getAlto(); // asegúrate de tener este getter
+
+        caballeroC.setY(ySuelo - alturaPersonaje); // lo colocamos justo sobre el suelo
+        enAire = false;
+        velocidadY = 0;
+    }
+
+    iniciarBucleJuego();
+}
+
+    
+}
+
+
+
 
     // -------------------------------------------------------------------------
     // 6. LÓGICA DE JUEGO PRINCIPAL (ACTUALIZAR)
@@ -793,12 +860,14 @@ protected void paintComponent(Graphics g) {
         }
     }
 
-    private void moverProyectiles() {
-        final int anchoPanel = getWidth();
-        for (Proyectil p : proyectilesEnemigos) {
-            p.mover(anchoPanel);
-        }
+   private void moverProyectiles() {
+    final int anchoPanel = getWidth();
+    final int altoPanel = getHeight();
+    for (Proyectil p : proyectilesEnemigos) {
+        p.mover(anchoPanel, altoPanel);
     }
+}
+
     
     private void generarProyectilesEnemigos() {
         for (Obstaculos obs : enemigos) {
@@ -824,12 +893,14 @@ protected void paintComponent(Graphics g) {
                     int xInicial = centroObsX - DAGA_ANCHO / 2;
                     int yInicial = obs.getY() + obs.getAlto() / 2 - DAGA_ALTO / 2;
                     
-                    Proyectil daga = new Proyectil(
-                        xInicial, yInicial,
-                        DAGA_SPRITE,
-                        dirX,
-                        DAGA_ANCHO, DAGA_ALTO
-                    );
+                   Proyectil daga = new Proyectil(
+                     xInicial, yInicial,
+                     DAGA_SPRITE,
+                     dirX, // velocidadX
+           0,// velocidadY
+                      DAGA_ANCHO, DAGA_ALTO
+);
+
                     proyectilesEnemigos.add(daga);
                     
                     obs.iniciarCooldown();
@@ -1007,25 +1078,32 @@ private void iniciarCinematica() {
     // ✅ Si la partida fue cargada desde BD, NO hay cinemática
     if (this.partidaCargada) {
         System.out.println("Partida cargada -> se omite cinemática.");
-
-        // ✅ MUY IMPORTANTE: reafirmar lo que vino de la BD
         this.cinematicaTerminada = true;
 
-        // ✅ Si el juego no está corriendo, iniciarlo
         if (!this.juegoIniciado) {
             iniciarBucleJuego();
         }
-
         return;
     }
 
-    // ✅ Si NO es partida cargada, iniciar cinemática normal
-    System.out.println("Reproduciendo cinemática...");
-    this.cinematicaTerminada = false;
+    // ---------------------------------------------------------------
+    // 🎬 CINEMÁTICA PARA NUEVA PARTIDA
+    // ---------------------------------------------------------------
+    System.out.println("Iniciando cinemática de nueva partida...");
 
-    // Aquí va tu código real de reproducción de cinemática
-    // ...
+    // Ejemplo simple: usar Timer para simular duración de cinemática
+    Timer t = new Timer(3000, e -> { // 3 segundos de cinemática
+        System.out.println("Cinemática finalizada -> iniciando juego");
+        this.cinematicaTerminada = true;
+
+        if (!this.juegoIniciado) {
+            iniciarBucleJuego();
+        }
+    });
+    t.setRepeats(false);
+    t.start();
 }
+
 
 
 

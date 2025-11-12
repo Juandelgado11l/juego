@@ -16,7 +16,7 @@ public class Juego extends JFrame {
     
     // --- Constructor 2: CARGAR PARTIDA ---
     public Juego(int idPartidaACargar) {
-        setTitle("Caballero Eterno");
+        setTitle("Caballero de rosas");
         
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -40,6 +40,7 @@ public class Juego extends JFrame {
 
     /**
      * Pregunta si desea guardar antes de cerrar y DELEGA el guardado al Tablero.
+     * Valida que el nombre de la partida no esté vacío.
      */
     private void manejarCierreYGuardado() {
         
@@ -59,30 +60,34 @@ public class Juego extends JFrame {
                 JOptionPane.PLAIN_MESSAGE
             );
             
-            if (nombrePartida != null && !nombrePartida.trim().isEmpty()) {
-                
-                // 🛑 ¡ESTE ES EL CAMBIO CLAVE! 
-                // Ya NO llamas a PartidaDAO directamente.
-                // Llamas a tablero.guardarEstadoDelJuego(), que se encarga de llamar al DAO con los 8 argumentos.
-                boolean guardado = tablero.guardarEstadoDelJuego(nombrePartida);
-                
-                if (guardado) {
-                    JOptionPane.showMessageDialog(
-                        this, 
-                        "Partida guardada con éxito.", 
-                        "Guardado", 
-                        JOptionPane.INFORMATION_MESSAGE
-                    );
+            if (nombrePartida != null) {
+                if (!nombrePartida.trim().isEmpty()) {
+                    boolean guardado = tablero.guardarEstadoDelJuego(nombrePartida);
+                    
+                    if (guardado) {
+                        JOptionPane.showMessageDialog(
+                            this, 
+                            "Partida guardada con éxito.", 
+                            "Guardado", 
+                            JOptionPane.INFORMATION_MESSAGE
+                        );
+                        dispose(); 
+                    } else {
+                        JOptionPane.showMessageDialog(
+                            this, 
+                            "Error al guardar la partida.", 
+                            "Error de Guardado", 
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                    }
                 } else {
                     JOptionPane.showMessageDialog(
-                        this, 
-                        "Error al guardar la partida.", 
-                        "Error de Guardado", 
-                        JOptionPane.ERROR_MESSAGE
+                        this,
+                        "El nombre de la partida no puede estar vacío.",
+                        "Nombre inválido",
+                        JOptionPane.WARNING_MESSAGE
                     );
                 }
-
-                dispose(); 
             }
 
         } else if (opcion == JOptionPane.NO_OPTION) {

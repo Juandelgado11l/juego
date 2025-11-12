@@ -36,7 +36,7 @@ public class Obstaculos {
         cargarSprite(rutaSprite);
         
         // El fantasma es el único móvil aquí
-        this.esMovil = rutaSprite.contains("fantasma");
+        this.esMovil = rutaSprite.contains("obstaculo");
         
         // ✅ Fantasma y Planta Carnívora no son destructibles
         this.vidaMaxima = 0; 
@@ -52,7 +52,7 @@ public class Obstaculos {
         this.nombreImagen = rutaSprite;
         cargarSprite(rutaSprite);
         
-        this.esMovil = rutaSprite.contains("fantasma"); // Aunque estos no deberían ser fantasmas
+        this.esMovil = rutaSprite.contains("obstaculo"); // Aunque estos no deberían ser fantasmas
         
         // ✅ Destructibles con vida asignada
         this.vidaMaxima = vidaInicial;
