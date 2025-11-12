@@ -82,7 +82,7 @@ public class MenuPrincipal extends JFrame {
 
     private void iniciarNuevaPartida() {
         dispose();
-        new Cinematica(-1).iniciar();;
+        new Cinematica(-1).iniciar();  // Solo para nueva partida
     }
 
     private void cargarPartidaSeleccionada() {
@@ -91,12 +91,15 @@ public class MenuPrincipal extends JFrame {
         if (seleccion != null && seleccion.getId() != -1) {
             dispose();
             int idCarga = seleccion.getId();
-            new Cinematica(idCarga).iniciar();;
+            // ⚡ Ajuste clave: cargar partida DIRECTO al juego
+            new Juego(idCarga);
         } else {
-            JOptionPane.showMessageDialog(this, "Por favor, selecciona una partida válida.", "Error de Carga", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, 
+                "Por favor, selecciona una partida válida.", 
+                "Error de Carga", 
+                JOptionPane.WARNING_MESSAGE);
         }
     }
-
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new MenuPrincipal());
     }

@@ -14,18 +14,20 @@ public class Tablero extends JPanel implements Runnable {
     private ArrayList<Proyectil> proyectilesEnemigos = new ArrayList<>();
     private Personaje caballeroC;
     public static int contador = 0; // Máximo de 10 rosas recogidas
-
+    // Declaraciones de variables de instancia en Tablero.java
+private volatile boolean cinematicaTerminada = false; // CLAVE: 'volatile' para hilos
+// ... (otras variables de juego)
     // ✅ VARIABLE DE ESTADO DEL JEFE
     private boolean jefeActivo = false; 
 
     private int xFondo = 0;
     private int xSuelo = 0;
-    private boolean cinematicaTerminada = false; // Asume 'false' al iniciar nueva partida
     private int velocidadY = 0;
     private final int gravedad = 2;
     private final int fuerzaSalto = -26;
     private boolean enAire = false;
-    
+    private boolean partidaCargada = false;
+
     private int xLimiteIzquierdo = 0; 
 
     private Sonido sonido = new Sonido();
@@ -81,7 +83,7 @@ public class Tablero extends JPanel implements Runnable {
     private final String NEBLINA_SPRITE = "/img/neblina.gif"; 
     private final String CABALLERO_SPRITE = "/img/caballero_oscuro.gif"; 
     private final String VAMPIRO_SPRITE = "/img/vampiro.gif"; 
-    
+    private boolean juegoIniciado = false; // <-- NUEVA BANDERA
     // ----------------------------------------------------------------------
     // 🌟 ADICIÓN: VARIABLES PARA CARGA DE PARTIDA
     // ----------------------------------------------------------------------
@@ -92,74 +94,93 @@ public class Tablero extends JPanel implements Runnable {
     // 1. CONSTRUCTOR
     // ----------------------------------------------------------------------
     public Tablero(int idPartidaACargar) {
-        setBackground(Color.BLACK);
-        setFocusable(true);
-        
-        // Inicializa componentes
-        vida = new Vida();
-        sonido.loopSonido("juego");
-        try {
-            gifUI = new ImageIcon(getClass().getResource("/img/flor.gif")).getImage(); 
-            fondo = new ImageIcon(getClass().getResource("/img/fondoPrincipal.png")).getImage();
-            suelo = new ImageIcon(getClass().getResource("/img/suelo.png")).getImage();
-        } catch (Exception e) {
-            System.err.println("ERROR cargando imágenes: " + e.getMessage());
-        }
-        
-        // Inicialización básica del Personaje.
-        caballeroC = new Personaje(100, 100); 
-        enAire = true;
-        velocidadY = 1;
-
-        controles = new Controles();
-        addKeyListener(controles);
-
-        this.idPartidaACargar = idPartidaACargar; // Guarda el ID en la variable de instancia
+    setBackground(Color.BLACK);
+    setFocusable(true);
+    
+    vida = new Vida();
+    sonido.loopSonido("juego");
+    try {
+        gifUI = new ImageIcon(getClass().getResource("/img/flor.gif")).getImage(); 
+        fondo = new ImageIcon(getClass().getResource("/img/fondoPrincipal.png")).getImage();
+        suelo = new ImageIcon(getClass().getResource("/img/suelo.png")).getImage();
+    } catch (Exception e) {
+        System.err.println("ERROR cargando imágenes: " + e.getMessage());
     }
+    
+    controles = new Controles();
+    addKeyListener(controles);
+
+    this.idPartidaACargar = idPartidaACargar;
+    if (idPartidaACargar != -1) {
+    boolean ok = cargarEstadoDelJuego(idPartidaACargar);
+    if (ok) {
+        this.cinematicaTerminada = true;  // <- AQUÍ ESTÁ LA SOLUCIÓN
+        System.out.println("DEBUG: Carga detectada → NO mostrar cinemática.");
+    }
+}
+
+}
+
 
     // ----------------------------------------------------------------------
     // 2. MÉTODO INICIAR JUEGO (Lógica de Nueva Partida vs. Carga)
     // ----------------------------------------------------------------------
-    public void iniciarJuego() {
-    
-        if (caballeroC == null) {
-            caballeroC = new Personaje(100, 100);
-        }
-        
-        boolean esPartidaNueva = (idPartidaACargar <= 0);
-        
-        if (!esPartidaNueva) {
-            // Intenta cargar los datos de la base de datos
-            if (cargarEstadoDelJuego(idPartidaACargar)) {
-                System.out.println("Partida cargada con éxito.");
-            } else {
-                // La carga falló, iniciar nueva partida
-                System.err.println("Carga de partida fallida. Reiniciando estados.");
-                esPartidaNueva = true;
-            }
-        }
-        
-        if (esPartidaNueva) {
-            // Reinicializa/Establece estados clave para una PARTIDA NUEVA
-            Tablero.contador = 0;
-            vida.setVidaActual(3); 
-            caballeroC.setSaltosMaximos(1); 
-            caballeroC.setVelocidadBase(4); 
-            this.cinematicaTerminada = false;
-            
-            // Fija la posición inicial (X y Y) del personaje SOLO si es partida nueva
-            caballeroC.setX(100);
-            caballeroC.setY(100); 
-        }
-        
-        // Aplicar la Posición Y (ajusta a suelo si es necesario, respeta Y cargada)
-        setPersonajeY(caballeroC); 
+public void iniciarJuego() {
 
-        // Iniciar el game loop
-        Thread gameThread = new Thread(this);
-        gameThread.start();
+    boolean esPartidaNueva = (idPartidaACargar <= 0);
+
+    // ✅ 1. CREAR PERSONAJE SOLO SI NO EXISTE
+    if (caballeroC == null) {
+        caballeroC = new Personaje(100, 100);
     }
-    
+
+    // ✅ 2. INTENTAR CARGAR PARTIDA
+    if (!esPartidaNueva) {
+        if (cargarEstadoDelJuego(idPartidaACargar)) {
+
+            System.out.println("Partida cargada con éxito.");
+
+            // Ajustes mínimos después de cargar
+            this.enAire = true;
+            this.velocidadY = 1;
+
+            repaint(); // Necesario para dibujar el juego sin cinemática
+
+        } else {
+            System.err.println("Error al cargar partida. Iniciando nueva.");
+            esPartidaNueva = true; 
+        }
+    }
+
+    // ✅ 3. CONFIGURAR ESTADO INICIAL SI ES NUEVA PARTIDA
+    if (esPartidaNueva) {
+        Tablero.contador = 0;
+        vida.setVidaActual(3);
+        caballeroC.setSaltosMaximos(1);
+        caballeroC.setVelocidadBase(4);
+
+        this.cinematicaTerminada = false; // << MUY IMPORTANTE
+
+        caballeroC.setX(100);
+        caballeroC.setY(100);
+
+        this.enAire = true;
+        this.velocidadY = 1;
+    }
+
+    // ✅ 4. Ajustar Y al suelo
+    setPersonajeY(caballeroC);
+
+    // ✅ 5. DECISIÓN FINAL: ¿Cinemática o juego directo?
+    if (this.cinematicaTerminada) {
+        System.out.println("DEBUG: iniciando juego sin cinemática (carga).");
+        iniciarBucleJuego();
+    } else {
+        System.out.println("DEBUG: iniciando cinemática (nueva partida).");
+        iniciarCinematica();
+    }
+}
+
     // ----------------------------------------------------------------------
     // 3. LÓGICA DE CARGA Y GUARDADO (CORREGIDA)
     // ----------------------------------------------------------------------
@@ -169,29 +190,37 @@ public class Tablero extends JPanel implements Runnable {
      * @param idPartida El ID de la fila a cargar.
      * @return true si la carga fue exitosa.
      */
-    public boolean cargarEstadoDelJuego(int idPartida) {
-        // CORRECCIÓN: PartidaDAO.cargarPartida devuelve 7 datos
-        int[] datosCargados = partidaDAO.cargarPartida(idPartida);
+ public boolean cargarEstadoDelJuego(int idPartida) {
 
-        if (datosCargados != null && datosCargados.length == 7) {
-            // Orden de los datos: [rosas, vida, saltos, velocidad, posX, posY, cinematica]
-            
-            Tablero.contador = datosCargados[0];        // 0. ROSA_CONTADOR
-            vida.setVidaActual(datosCargados[1]);       // 1. VIDA_ACTUAL
-            caballeroC.setSaltosMaximos(datosCargados[2]); // 2. SALTO_MAXIMO
-            caballeroC.setVelocidadBase(datosCargados[3]); // 3. VELOCIDAD_BASE
-            caballeroC.setX(datosCargados[4]);          // 4. POS_X
-            caballeroC.setY(datosCargados[5]);          // 5. POS_Y
-            
-            int cinematicaInt = datosCargados[6];       // 6. CINEMATICA_TERMINADA
-            this.cinematicaTerminada = (cinematicaInt == 1);
-            
-            return true;
-        } else {
-            System.err.println("Error al cargar datos para el ID: " + idPartida + ". Formato incorrecto.");
-            return false;
-        }
+    int[] datos = partidaDAO.cargarPartida(idPartida);
+    if (datos == null) return false;
+    if (datos.length != 7) return false;
+
+    if (caballeroC == null) {
+        caballeroC = new Personaje(100, 100);
     }
+
+    Tablero.contador           = datos[0];
+    vida.setVidaActual         (datos[1]);
+    caballeroC.setSaltosMaximos(datos[2]);
+    caballeroC.setVelocidadBase(datos[3]);
+    caballeroC.setX            (datos[4]);
+    caballeroC.setY            (datos[5]);
+
+    // ✅ VALOR REAL DE LA BD
+    this.cinematicaTerminada = (datos[6] == 1);
+
+    // ✅ Marcar que es una partida cargada
+    this.partidaCargada = true;
+
+    System.out.println("Partida cargada: cinematicaTerminada=" + this.cinematicaTerminada);
+
+    return true;
+}
+
+
+
+
 
     
     /**
@@ -259,58 +288,80 @@ public class Tablero extends JPanel implements Runnable {
     // ----------------------------------------------------------------------
     // 5. PAINT COMPONENT
     // ----------------------------------------------------------------------
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
+@Override
+protected void paintComponent(Graphics g) {
+    super.paintComponent(g);
 
-        int altoSuelo = 20;
-        int ySuelo = getHeight() - altoSuelo;
+    // DEBUG: Ver estado real
+    System.out.println("DEBUG DIBUJO: C.T. = " + this.cinematicaTerminada);
 
-        // Dibujar Fondo (Paralaje)
-        g.drawImage(fondo, xFondo, 0, getWidth(), getHeight(), this);
-        g.drawImage(fondo, xFondo + getWidth(), 0, getWidth(), getHeight(), this);
+    // --- 1. SI LA CINEMÁTICA NO HA TERMINADO → DIBUJAR SOLO LA CINEMÁTICA ---
+    if (!this.cinematicaTerminada) {
 
-        // Dibujar Suelo (Paralaje)
-        g.drawImage(suelo, xSuelo, ySuelo, getWidth(), altoSuelo, this);
-        g.drawImage(suelo, xSuelo + getWidth(), ySuelo, getWidth(), altoSuelo, this);
+        // Fondo negro
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, getWidth(), getHeight());
 
-        // Dibujar HUD (Elemento fijo, no afectado por scroll)
-        g.drawImage(gifUI, 10, 10, 100, 100, this);
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 50));
-        g.drawString(String.valueOf(contador), 115, 80);
-        
-        if (vida != null) {
-            final int X_VIDA = getWidth() - 260;
-            final int Y_VIDA = 20;
-            vida.dibujar(g, X_VIDA, Y_VIDA);
-        }
+        // Texto (simulación de cinemática)
+        g.setColor(Color.RED);
+        g.setFont(new Font("Serif", Font.BOLD, 50));
+        g.drawString("CINEMÁTICA DE INTRODUCCIÓN",
+                     getWidth() / 2 - 350, getHeight() / 2);
 
-        // Dibuja enemigos
-        synchronized (enemigos) {
-            for (Obstaculos o : enemigos) {
-                o.dibujar(g);
-                o.dibujarBarraVida(g); 
-            }
-        }
-        
-        // Dibuja proyectiles
-        synchronized (proyectilesEnemigos) {
-            for (Proyectil p : proyectilesEnemigos) {
-                p.dibujar(g);
-            }
-        }
-        
-        if (caballeroC != null) {
-            caballeroC.dibujar(g, this.esInvulnerable, this.lastUpdateTime, this);
-        }
-        
-        // Dibuja rosas
-        synchronized (rosas) {
-            for (Rosa r : rosas) r.dibujar(g);
+        return; // *** CRÍTICO *** evita dibujar el juego por error
+    }
+
+    // --- 2. SI LA CINEMÁTICA TERMINÓ → DIBUJAR JUEGO NORMAL ---
+
+    int altoSuelo = 20;
+    int ySuelo = getHeight() - altoSuelo;
+
+    // Fondo (paralaje)
+    g.drawImage(fondo, xFondo, 0, getWidth(), getHeight(), this);
+    g.drawImage(fondo, xFondo + getWidth(), 0, getWidth(), getHeight(), this);
+
+    // Suelo
+    g.drawImage(suelo, xSuelo, ySuelo, getWidth(), altoSuelo, this);
+    g.drawImage(suelo, xSuelo + getWidth(), ySuelo, getWidth(), altoSuelo, this);
+
+    // HUD
+    g.drawImage(gifUI, 10, 10, 100, 100, this);
+    g.setColor(Color.WHITE);
+    g.setFont(new Font("Arial", Font.BOLD, 50));
+    g.drawString(String.valueOf(contador), 115, 80);
+
+    if (vida != null) {
+        final int X_VIDA = getWidth() - 260;
+        final int Y_VIDA = 20;
+        vida.dibujar(g, X_VIDA, Y_VIDA);
+    }
+
+    // Enemigos
+    synchronized (enemigos) {
+        for (Obstaculos o : enemigos) {
+            o.dibujar(g);
+            o.dibujarBarraVida(g);
         }
     }
-    
+
+    // Proyectiles
+    synchronized (proyectilesEnemigos) {
+        for (Proyectil p : proyectilesEnemigos) {
+            p.dibujar(g);
+        }
+    }
+
+    // Personaje
+    if (caballeroC != null) {
+        caballeroC.dibujar(g, this.esInvulnerable, this.lastUpdateTime, this);
+    }
+
+    // Rosas
+    synchronized (rosas) {
+        for (Rosa r : rosas) r.dibujar(g);
+    }
+}
+
     // -------------------------------------------------------------------------
     // 6. LÓGICA DE JUEGO PRINCIPAL (ACTUALIZAR)
     // -------------------------------------------------------------------------
@@ -642,6 +693,7 @@ public class Tablero extends JPanel implements Runnable {
         }
     }
     
+    
     private void moverObstaculosMoviles() {
         // 🛑 BLOQUEO: Si el jefe está activo, los obstáculos móviles se detienen.
         if (jefeActivo) return; 
@@ -922,6 +974,61 @@ public class Tablero extends JPanel implements Runnable {
     public Personaje getJugador() {
         return this.caballeroC;
     }
+    // ✅ NUEVO MÉTODO: Inicia el bucle de juego principal
+// ✅ NUEVO MÉTODO: Inicia el bucle de juego principal
+private void iniciarBucleJuego() {
+
+    // 🛑 1. EVITAR DOBLE INICIO DEL JUEGO
+    if (this.juegoIniciado) {
+        System.out.println("ADVERTENCIA: El bucle de juego ya está activo. Evitando doble inicio.");
+        return;
+    }
+
+    // ✅ Marcar que el juego ya inició
+    this.juegoIniciado = true;
+
+    // ✅ 2. CREAR Y LANZAR EL HILO PRINCIPAL DE JUEGO
+    Thread gameThread = new Thread(this, "GameLoopThread");
+
+    try {
+        gameThread.start();
+        System.out.println("DEBUG: Hilo principal del juego iniciado correctamente.");
+    } catch (Exception e) {
+        System.err.println("ERROR al iniciar el hilo del juego:");
+        e.printStackTrace();
+        this.juegoIniciado = false; // Seguridad por si falla
+    }
+}
+
+
+// ✅ NUEVO MÉTODO: Gestiona la reproducción de la cinemática
+private void iniciarCinematica() {
+
+    // ✅ Si la partida fue cargada desde BD, NO hay cinemática
+    if (this.partidaCargada) {
+        System.out.println("Partida cargada -> se omite cinemática.");
+
+        // ✅ MUY IMPORTANTE: reafirmar lo que vino de la BD
+        this.cinematicaTerminada = true;
+
+        // ✅ Si el juego no está corriendo, iniciarlo
+        if (!this.juegoIniciado) {
+            iniciarBucleJuego();
+        }
+
+        return;
+    }
+
+    // ✅ Si NO es partida cargada, iniciar cinemática normal
+    System.out.println("Reproduciendo cinemática...");
+    this.cinematicaTerminada = false;
+
+    // Aquí va tu código real de reproducción de cinemática
+    // ...
+}
+
+
+
 
     /**
      * Obtiene la velocidad base del personaje (la que tiene almacenada).
