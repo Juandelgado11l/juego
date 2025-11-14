@@ -28,7 +28,7 @@ public class Sonido {
                 URL url = getClass().getResource(r[1]);
 
                 if (url == null) {
-                    System.out.println("❌ No se encontró: " + r[1]);
+                    System.out.println(" No se encontró: " + r[1]);
                     continue;
                 }
 

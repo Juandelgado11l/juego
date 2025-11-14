@@ -10,6 +10,7 @@ public class MenuPrincipal extends JFrame {
 
     private final Font FONT_BOTON = new Font("Arial", Font.BOLD, 24);
 
+    // Menú principal del juego
     public MenuPrincipal() {
         super("Menú Principal del Juego");
         partidaDAO = new PartidaDAO();
@@ -18,23 +19,28 @@ public class MenuPrincipal extends JFrame {
         setSize(800, 600);
         setLocationRelativeTo(null);
 
+        // Panel principal
         JPanel panelPrincipal = new JPanel(new BorderLayout(20, 20));
         panelPrincipal.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 50));
         panelPrincipal.setBackground(Color.DARK_GRAY);
 
+        // Título
         JLabel lblTitulo = new JLabel("CABALLERO DE ROSAS", SwingConstants.CENTER);
         lblTitulo.setFont(new Font("Serif", Font.BOLD, 48));
         lblTitulo.setForeground(Color.WHITE);
         panelPrincipal.add(lblTitulo, BorderLayout.NORTH);
 
+        // Panel de opciones
         JPanel panelOpciones = new JPanel(new GridLayout(4, 1, 15, 15));
         panelOpciones.setOpaque(false);
 
+        // Botón nueva partida
         JButton btnNuevaPartida = new JButton("NUEVA PARTIDA");
         btnNuevaPartida.setFont(FONT_BOTON);
         btnNuevaPartida.addActionListener(e -> iniciarNuevaPartida());
         panelOpciones.add(btnNuevaPartida);
 
+        // Panel para cargar partidas
         JPanel panelCarga = new JPanel(new BorderLayout(10, 0));
         panelCarga.setOpaque(false);
 
@@ -51,20 +57,20 @@ public class MenuPrincipal extends JFrame {
 
         panelOpciones.add(panelCarga);
 
+        // Botón salir
         JButton btnSalir = new JButton("SALIR");
         btnSalir.setFont(FONT_BOTON);
         btnSalir.addActionListener(e -> System.exit(0));
         panelOpciones.add(btnSalir);
 
         panelPrincipal.add(panelOpciones, BorderLayout.CENTER);
-
         add(panelPrincipal);
 
         cargarListaPartidas();
-
         setVisible(true);
     }
 
+    // Carga la lista de partidas guardadas
     private void cargarListaPartidas() {
         List<PartidaGuardada> partidas = partidaDAO.listarPartidas();
         comboPartidas.removeAllItems();
@@ -73,34 +79,34 @@ public class MenuPrincipal extends JFrame {
             comboPartidas.addItem(new PartidaGuardada(-1, "No hay partidas guardadas", ""));
             btnCargarPartida.setEnabled(false);
         } else {
-            for (PartidaGuardada p : partidas) {
-                comboPartidas.addItem(p);
-            }
+            for (PartidaGuardada p : partidas) comboPartidas.addItem(p);
             btnCargarPartida.setEnabled(true);
         }
     }
 
+    // Inicia una nueva partida
     private void iniciarNuevaPartida() {
         dispose();
-        new Cinematica(-1).iniciar();  // Solo para nueva partida
+        new Cinematica(-1).iniciar();
     }
 
+    // Carga la partida seleccionada
     private void cargarPartidaSeleccionada() {
         PartidaGuardada seleccion = (PartidaGuardada) comboPartidas.getSelectedItem();
 
         if (seleccion != null && seleccion.getId() != -1) {
             dispose();
-            int idCarga = seleccion.getId();
-            // ⚡ Ajuste clave: cargar partida DIRECTO al juego
-            new Juego(idCarga);
+            new Juego(seleccion.getId());
         } else {
-            JOptionPane.showMessageDialog(this, 
-                "Por favor, selecciona una partida válida.", 
-                "Error de Carga", 
+            JOptionPane.showMessageDialog(this,
+                "Por favor, selecciona una partida válida.",
+                "Error de Carga",
                 JOptionPane.WARNING_MESSAGE);
         }
     }
+
+    // Punto de entrada
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new MenuPrincipal());
+        SwingUtilities.invokeLater(MenuPrincipal::new);
     }
 }

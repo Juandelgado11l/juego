@@ -5,61 +5,90 @@ import java.awt.Color;
 import javax.swing.ImageIcon;
 
 public class Obstaculos {
-    
-    // --- Propiedades de Posición y Visuales ---
+
+    // Propiedades de Posición y Visuales
     private int x;
     private int y;
-    private int ancho = 180;  
-    private int alto = 180;  
+    private int ancho;  
+    private int alto;   
     private Image sprite; 
     private String nombreImagen; 
 
-    // --- Propiedades de Juego ---
+    // Propiedades de Juego
     private int vidaMaxima;
     private int vidaActual;
     private boolean esMovil = false;
     private int velocidadMovil = 2; 
-    
+
     // Cooldown de Ataque
     private long tiempoUltimoAtaque = 0;
     private final long COOLDOWN_ATAQUE = 1200; 
     private boolean estaAtacandoAnimacion = false;
     private long finAnimacionAtaque = 0;
 
-    // ==========================================================
-    // CONSTRUCTOR 1 (3 ARGUMENTOS) - Para NO DESTRUCTIBLES (Fantasma, Planta Carnívora)
-    // ==========================================================
-    public Obstaculos(int x, int y, String rutaSprite) {
+    private boolean activo = true;
+
+    // CONSTRUCTOR 1 - Obstáculo fijo o móvil sin vida
+    public Obstaculos(int x, int y, String rutaSprite, boolean esMovil) {
         this.x = x;
         this.y = y;
         this.nombreImagen = rutaSprite;
+        this.esMovil = esMovil;
         cargarSprite(rutaSprite);
-        
-        // El fantasma es el único móvil aquí
-        this.esMovil = rutaSprite.contains("obstaculo");
-        
-        // ✅ Fantasma y Planta Carnívora no son destructibles
+
+        if (esMovil) {
+            this.ancho = 100;
+            this.alto = 100;
+        } else {
+            // Este tamaño aplica a jefes, enredaderas y plantas sin vida base
+            this.ancho = 200;
+            this.alto = 200;
+        }
+
         this.vidaMaxima = 0; 
         this.vidaActual = 0;
     }
-    
-    // ==========================================================
-    // CONSTRUCTOR 2 (4 ARGUMENTOS) - Para DESTRUCTIBLES (Árbol, Enredadera)
-    // ==========================================================
-    public Obstaculos(int x, int y, String rutaSprite, int vidaInicial) {
+
+    // CONSTRUCTOR 2 - Obstáculos destructibles (árbol, enredadera) 
+    public Obstaculos(int x, int y, String rutaSprite, int vidaInicial, boolean esMovil) {
         this.x = x;
         this.y = y;
         this.nombreImagen = rutaSprite;
+        this.esMovil = esMovil;
         cargarSprite(rutaSprite);
-        
-        this.esMovil = rutaSprite.contains("obstaculo"); // Aunque estos no deberían ser fantasmas
-        
-        // ✅ Destructibles con vida asignada
+
+        // Se usa el mismo tamaño base, pero se puede ajustar en Tablero.
+        if (esMovil) {
+            this.ancho = 100;
+            this.alto = 100;
+        } else {
+            this.ancho = 200;
+            this.alto = 200;
+        }
+
+        this.vidaMaxima = vidaInicial;
+        this.vidaActual = vidaInicial;
+    }
+    
+    // CONSTRUCTOR 3 - Obstáculo con vida sin ser Movil (Jefes, Objetos destructibles)
+    public Obstaculos(int x, int y, String rutaSprite, int vidaInicial, boolean esMovil, int ancho, int alto) {
+        this.x = x;
+        this.y = y;
+        this.nombreImagen = rutaSprite;
+        this.esMovil = esMovil;
+        cargarSprite(rutaSprite);
+        this.ancho = ancho;
+        this.alto = alto;
+
         this.vidaMaxima = vidaInicial;
         this.vidaActual = vidaInicial;
     }
 
-    // --- Métodos de Dibujo y Actualización ---
+
+    public void setY(int y) {
+        this.y = y;
+    }
+
     private void cargarSprite(String rutaSprite) {
         try {
             this.sprite = new ImageIcon(getClass().getResource(rutaSprite)).getImage();
@@ -68,10 +97,10 @@ public class Obstaculos {
             this.sprite = new ImageIcon().getImage(); 
         }
     }
-    
+
     public void dibujar(Graphics g) {
         g.drawImage(sprite, x, y, ancho, alto, null);
-        
+
         if (estaAtacandoAnimacion && System.currentTimeMillis() < finAnimacionAtaque) {
             g.setColor(new Color(255, 0, 0, 100));
             g.fillOval(x - 10, y - 10, ancho + 20, alto + 20);
@@ -79,83 +108,88 @@ public class Obstaculos {
             estaAtacandoAnimacion = false;
         }
     }
-    
-    // DENTRO DE LA CLASE Obstaculos.java
 
-        public void dibujarBarraVida(Graphics g) {
-     // ✅ CORRECCIÓN: Ahora se dibuja si vidaMaxima > 0, independientemente de la vidaActual.
-      if (vidaMaxima > 0) { 
+    public void dibujarBarraVida(Graphics g) {
+        if (vidaMaxima > 0) {
             int barraAncho = ancho;
-         int barraAlto = 5;
+            int barraAlto = 5;
             int barraY = y - 10;
-        
-         // Dibuja el fondo rojo (la vida máxima)
-         g.setColor(Color.RED);
-         g.fillRect(x, barraY, barraAncho, barraAlto);
-        
-          // Dibuja la parte verde (la vida actual)
-          g.setColor(Color.GREEN);
-          int vidaAncho = (int) ((double) vidaActual / vidaMaxima * barraAncho);
-          g.fillRect(x, barraY, vidaAncho, barraAlto);
 
-          // Dibuja el borde
-         g.setColor(Color.BLACK);
-         g.drawRect(x, barraY, barraAncho, barraAlto);
-    }
-}
-    
-    public void actualizarEstado() {
-        // Lógica de animación o estado específico del obstáculo
-    }
-    
-    public void mover() {
-        if (esMovil) {
-            x += velocidadMovil;
+            g.setColor(Color.RED);
+            g.fillRect(x, barraY, barraAncho, barraAlto);
+
+            g.setColor(Color.GREEN);
+            int vidaAncho = (int) ((double) vidaActual / vidaMaxima * barraAncho);
+            g.fillRect(x, barraY, vidaAncho, barraAlto);
+
+            g.setColor(Color.BLACK);
+            g.drawRect(x, barraY, barraAncho, barraAlto);
         }
     }
 
-    // --- Lógica de Combate y Colisión ---
+    // El único propósito aquí es el cleanup. El movimiento se hace en mover().
+    public void actualizarEstado() {
+        if (x + ancho < 0) {
+            activo = false; // Desactivarlo si sale de la pantalla
+        }
+    }
+
+    // Movimiento de scroll propio del obstáculo (SOLO MÓVILES)
+    public void mover() {
+        if (esMovil) {
+            x -= velocidadMovil;
+        }
+    }
 
     public Rectangle getRect() {
         return new Rectangle(x, y, ancho, alto);
     }
-    
+
     public void recibirDano(int dano) {
         if (vidaMaxima > 0) {
-            this.vidaActual -= dano;
-            if (this.vidaActual < 0) this.vidaActual = 0;
+            vidaActual -= dano;
+            if (vidaActual < 0) vidaActual = 0;
         }
     }
-    
+
     public boolean estaDestruido() {
         return vidaActual <= 0 && vidaMaxima > 0;
     }
-    
+
     public boolean tieneVida() {
         return vidaMaxima > 0;
     }
-    
-    // --- Lógica de Ataque ---
 
     public boolean puedeAtacar() {
         return System.currentTimeMillis() > tiempoUltimoAtaque + COOLDOWN_ATAQUE;
     }
-    
+
     public void iniciarCooldown() {
-        this.tiempoUltimoAtaque = System.currentTimeMillis();
-    }
-    
-    public void iniciarAtaqueAnimacion() {
-        this.estaAtacandoAnimacion = true;
-        this.finAnimacionAtaque = System.currentTimeMillis() + 300; 
+        tiempoUltimoAtaque = System.currentTimeMillis();
     }
 
-    // --- Getters y Setters ---
+    public void iniciarAtaqueAnimacion() {
+        estaAtacandoAnimacion = true;
+        finAnimacionAtaque = System.currentTimeMillis() + 300; 
+    }
+
+    // Getters y setters
+    public boolean esMovil() {
+        return esMovil;
+    }
+
+    public boolean isActivo() {
+        return activo;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
+    }
 
     public Image getImagen() {
         return sprite;
     }
-    
+
     public Rectangle getHitbox() {
         return getRect();
     }
@@ -175,7 +209,7 @@ public class Obstaculos {
     public int getAncho() {
         return ancho;
     }
-    
+
     public int getAlto() {
         return alto;
     }

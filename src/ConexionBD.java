@@ -3,9 +3,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class ConexionBD {
-    
-    // ⚠️ Reemplaza estos valores con tu configuración real de SQL Server
-    // Usamos 'JUANDG' que es el nombre de tu servidor, no 'localhost'
     private static final String URL_SERVIDOR = "JUANDG"; 
     private static final int PUERTO = 1433; // Puerto TCP por defecto de SQL Server
     private static final String NOMBRE_BD = "GameSaveBD"; // Nombre de la base de datos
@@ -23,7 +20,7 @@ public class ConexionBD {
     public static Connection conectar() {
         Connection conexion = null;
         try {
-            // 🌟 CORRECCIÓN CLAVE: Forzamos la carga del driver JDBC 🌟
+            // forzar a carga del driver JDBC 🌟
             // Esto resuelve el error "No suitable driver found"
             Class.forName(DRIVER_CLASS); 
             

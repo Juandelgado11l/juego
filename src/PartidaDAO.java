@@ -7,11 +7,9 @@ import java.util.List;
 
 public class PartidaDAO {
 
-    // ----------------------------------------------------------------------
-    // --- MÉTODO 1: GUARDAR PARTIDA (UPDATE O INSERT) ---
-    // ----------------------------------------------------------------------
-    public boolean guardarPartida(String nombrePartida, int contadorRosas, int vida, 
-                                  int saltos, int velocidad, int posX, int posY, 
+    // Guarda o actualiza una partida
+    public boolean guardarPartida(String nombrePartida, int contadorRosas, int vida,
+                                  int saltos, int velocidad, int posX, int posY,
                                   int cinematicaTerminada) {
 
         String SQL_UPDATE =
@@ -25,7 +23,7 @@ public class PartidaDAO {
 
         try (Connection conn = ConexionBD.conectar()) {
 
-            // --- INTENTAR ACTUALIZAR ---
+            // Intentar actualizar
             try (PreparedStatement stmtUpdate = conn.prepareStatement(SQL_UPDATE)) {
                 stmtUpdate.setInt(1, contadorRosas);
                 stmtUpdate.setInt(2, vida);
@@ -37,10 +35,10 @@ public class PartidaDAO {
                 stmtUpdate.setString(8, nombrePartida);
 
                 int filasAfectadas = stmtUpdate.executeUpdate();
-                if (filasAfectadas > 0) return true; // Sobrescribió
+                if (filasAfectadas > 0) return true;
             }
 
-            // --- INSERTAR SI NO EXISTE ---
+            // Insertar si no existe
             try (PreparedStatement stmtInsert = conn.prepareStatement(SQL_INSERT)) {
                 stmtInsert.setString(1, nombrePartida);
                 stmtInsert.setInt(2, contadorRosas);
@@ -51,19 +49,16 @@ public class PartidaDAO {
                 stmtInsert.setInt(7, posY);
                 stmtInsert.setInt(8, cinematicaTerminada);
 
-                int filasAfectadas = stmtInsert.executeUpdate();
-                return filasAfectadas > 0;
+                return stmtInsert.executeUpdate() > 0;
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al guardar/actualizar partida: " + e.getMessage());
+            System.err.println("Error al guardar partida: " + e.getMessage());
             return false;
         }
     }
 
-    // ----------------------------------------------------------------------
-    // --- MÉTODO 2: CARGAR DATOS (SELECT por ID) ---
-    // ----------------------------------------------------------------------
+    // Carga los datos de una partida
     public int[] cargarPartida(int idPartida) {
         String SQL_SELECT =
             "SELECT ROSA_CONTADOR, VIDA_ACTUAL, SALTO_MAXIMO, VELOCIDAD_BASE, POS_X, POS_Y, CINEMATICA_TERMINADA " +
@@ -73,7 +68,6 @@ public class PartidaDAO {
              PreparedStatement stmt = conn.prepareStatement(SQL_SELECT)) {
 
             stmt.setInt(1, idPartida);
-
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return new int[]{
@@ -87,16 +81,13 @@ public class PartidaDAO {
                     };
                 }
             }
-            return null;
         } catch (SQLException e) {
             System.err.println("Error al cargar partida (ID: " + idPartida + "): " + e.getMessage());
-            return null;
         }
+        return null;
     }
 
-    // ----------------------------------------------------------------------
-    // --- MÉTODO 3: LISTAR PARTIDAS (SELECT para Menú) ---
-    // ----------------------------------------------------------------------
+    // Lista todas las partidas guardadas
     public List<PartidaGuardada> listarPartidas() {
         List<PartidaGuardada> partidas = new ArrayList<>();
         String SQL_SELECT_ALL =
@@ -119,9 +110,7 @@ public class PartidaDAO {
         return partidas;
     }
 
-    // ----------------------------------------------------------------------
-    // --- MÉTODO 4: VERIFICAR SI EXISTE NOMBRE ---
-    // ----------------------------------------------------------------------
+    // Verifica si un nombre de partida ya existe
     public boolean existeNombre(String nombrePartida) {
         String SQL_CHECK = "SELECT COUNT(*) FROM PARTIDAS_GUARDADAS WHERE NOMBRE_PARTIDA = ?";
 
@@ -129,15 +118,11 @@ public class PartidaDAO {
              PreparedStatement stmt = conn.prepareStatement(SQL_CHECK)) {
 
             stmt.setString(1, nombrePartida);
-
             try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) > 0; // Si hay al menos 1 fila con ese nombre
-                }
+                if (rs.next()) return rs.getInt(1) > 0;
             }
-
         } catch (SQLException e) {
-            System.err.println("Error al verificar nombre de partida: " + e.getMessage());
+            System.err.println("Error al verificar nombre: " + e.getMessage());
         }
         return false;
     }

@@ -12,7 +12,7 @@ public class Proyectil {
     private Image imagen;
     private boolean activo = true; // El estado del proyectil (si debe dibujarse y colisionar)
 
-    // --- CONSTRUCTOR ---
+    //CONSTRUCTOR 
     public Proyectil(int x, int y, String rutaImagen, int velocidadX, int velocidadY, int ancho, int alto) {
         this.x = x;
         this.y = y;
@@ -24,12 +24,12 @@ public class Proyectil {
         try {
             this.imagen = new ImageIcon(getClass().getResource(rutaImagen)).getImage();
         } catch (Exception e) {
-            System.err.println("❌ Error cargando imagen de proyectil (" + rutaImagen + "): Usando fallback rojo.");
+            System.err.println(" Error cargando imagen de proyectil (" + rutaImagen + "): Usando fallback rojo.");
             this.imagen = null;
         }
     }
 
-    // --- LÓGICA DE MOVIMIENTO ---
+    // LÓGICA DE MOVIMIENTO 
     public void mover(int limitePantallaX, int limitePantallaY) {
         this.x += velocidadX;
         this.y += velocidadY;
@@ -40,7 +40,7 @@ public class Proyectil {
         }
     }
     
-    // --- DIBUJO ---
+    //DIBUJO 
     public void dibujar(Graphics g) {
         if (activo) {
             if (imagen != null) {
@@ -53,7 +53,7 @@ public class Proyectil {
         }
     }
     
-    // --- GETTERS Y SETTERS ---
+    // GETTERS Y SETTERS 
     public int getX() { return x; }
     public int getY() { return y; }
     public int getAncho() { return ancho; }

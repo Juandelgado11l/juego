@@ -18,15 +18,19 @@ public class Personaje {
     private boolean isAtacando = false;
     private boolean estaRalentizado = false;
     private boolean estaMoviendose = false;
+    
+    // 🌟 NUEVAS VARIABLES NECESARIAS PARA EL CONTROL EN TABLERO
+    private boolean estaSaltando = false; // <-- AÑADIDO
+    private int velocidadX = 0;         // <-- AÑADIDO
 
     // 🌟 --- Estado de Habilidades Desbloqueables ---
     private int saltosDisponibles = 1; 
     private int saltosMaximos = 1; 
-    private int velocidadBase = 4; 
+    private int velocidadBase = 5; 
 
     // --- Estado de Vida ---
-    private int vida = 3;              // Vida actual en corazones
-    private final int vidaMaxima = 3;  // Máximo de corazones
+    private int vida = 3; // Vida actual en corazones
+    private final int vidaMaxima = 3; // Máximo de corazones
 
     // --- Rosas recogidas ---
     private int rosasRecogidas = 0;
@@ -131,9 +135,14 @@ public class Personaje {
     }
 
     // ----------------------------------------------------------------------
-    // --- MÉTODOS GETTERS/SETTERS ---
+    // --- MÉTODOS GETTERS/SETTERS Y CORRECCIONES PARA EL CASTILLO ---
     // ----------------------------------------------------------------------
     public Image getImagen() { return spriteActual; }
+    
+    // CORRECCIÓN 1: Método getRect() requerido por Tablero para colisiones
+    public Rectangle getRect() { return new Rectangle(x, y, ancho, alto); } 
+    
+    // Método getHitbox() para mantener el código que usa este nombre (opcional)
     public Rectangle getHitbox() { return new Rectangle(x, y, ancho, alto); }
 
     public int getX() { return x; }
@@ -142,12 +151,21 @@ public class Personaje {
     public void setY(int y) { this.y = y; }
     public int getAncho() { return ancho; }
     public int getAlto() { return alto; }
+    
+    // CORRECCIÓN 2: Setter setVelocidadX() requerido por Tablero
+    public int getVelocidadX() { return velocidadX; }
+    public void setVelocidadX(int velocidadX) { this.velocidadX = velocidadX; }
+    
 
     public boolean estaAtacando() { return isAtacando; }
     public void setAtacando(boolean isAtacando) { this.isAtacando = isAtacando; }
 
     public boolean isMirandoDerecha() { return mirandoDerecha; }
 
+    // CORRECCIÓN 3: Métodos setSaltando() y estaSaltando() requerido por Tablero
+    public boolean estaSaltando() { return estaSaltando; }
+    public void setSaltando(boolean estaSaltando) { this.estaSaltando = estaSaltando; } // <-- CORREGIDO
+    
     public boolean getEstaRalentizado() { return estaRalentizado; }
     public void setEstaRalentizado(boolean estaRalentizado) { this.estaRalentizado = estaRalentizado; }
 

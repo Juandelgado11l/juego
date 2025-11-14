@@ -31,7 +31,7 @@ public class Colisiones {
     }
 
     /**
-     * ✅ MÉTODO REQUERIDO: Detecta la colisión a nivel de píxel entre dos objetos.
+     * ✅ MÉTODO Detecta la colisión a nivel de píxel entre dos objetos.
      * Resuelve la advertencia "is never used locally" al estar listo para ser llamado.
      *
      * @param img1 La imagen (sprite) del primer objeto.

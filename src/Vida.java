@@ -13,7 +13,7 @@ public class Vida {
     private Image imagenCorazonLleno;
     private Image imagenCorazonVacio;
     
-    // --- Constructores ---
+    //Constructores
     
     public Vida() {
         this(3); 
@@ -24,7 +24,6 @@ public class Vida {
         this.vidaActual = vidaMaxima;
         
         try {
-            // 🚨 CORRECCIÓN: Añadir la barra inicial (/) para la ruta del classpath
             imagenCorazonLleno = new ImageIcon(getClass().getResource("/img/vida.jpg")).getImage();
             imagenCorazonVacio = new ImageIcon(getClass().getResource("/img/corazonRoto.jpg")).getImage();
         } catch (Exception e) {
@@ -33,15 +32,6 @@ public class Vida {
             imagenCorazonVacio = null;
         }
     }
-    
-    // ----------------------------------------------------------------------
-    // 💾 ADICIONES REQUERIDAS PARA CARGAR PARTIDA 💾
-    // ----------------------------------------------------------------------
-
-    /**
-     * 💾 Establece la vida actual del personaje (utilizado al cargar una partida).
-     * @param vida La cantidad de vida a restaurar.
-     */
     public void setVidaActual(int vida) {
         // Asegura que la vida esté dentro del rango [0, vidaMaxima]
         if (vida >= 0) {
@@ -50,23 +40,13 @@ public class Vida {
             this.vidaActual = 0;
         }
     }
-    
-    /**
-     * Establece la vida máxima (útil si la vida máxima cambia con mejoras).
-     * @param vida La nueva vida máxima.
-     */
     public void setVidaMaxima(int vida) {
         this.vidaMaxima = vida;
         // Si la vida actual excede la nueva máxima, la ajustamos.
         if (this.vidaActual > this.vidaMaxima) {
             this.vidaActual = this.vidaMaxima;
         }
-    }
-    
-    // ----------------------------------------------------------------------
-    // --- Métodos de Control ---
-    // ----------------------------------------------------------------------
-    
+    }    
     /**
      * Quita una cantidad de vida al personaje.
      * @param daño Cantidad de vida a restar.
@@ -93,7 +73,7 @@ public class Vida {
         return vidaActual <= 0;
     }
 
-    // --- Método de Dibujo ---
+    //Método de Dibujo 
     
     public void dibujar(Graphics g, int x, int y) {
         
@@ -121,7 +101,7 @@ public class Vida {
         }
     }
     
-    // --- Getters ---
+    // Getters 
     
     public int getVidaActual() {
         return vidaActual;

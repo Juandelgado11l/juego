@@ -1,10 +1,8 @@
 import java.awt.BorderLayout;
 import java.awt.Toolkit;
 import java.io.File;
-
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
-
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Group;
@@ -21,36 +19,29 @@ public class Cinematica extends JFrame {
 
     private static final String RUTA_VIDEO = "src/video/intro_game.mp4";
     
-    // 🌟 ADICIÓN: Referencia a la ventana de juego, para iniciarla al cargar partida.
+    // ID de partida cargada (-1 si es nueva)
     private int idPartidaACargar = -1; 
-    
 
     public Cinematica() {
-        // Llama al constructor que permite pasar un ID de partida.
-        this(-1); 
+        this(-1); // Nueva partida
     }
     
-    // 🌟 NUEVO CONSTRUCTOR para permitir cargar una partida (ID > -1)
     public Cinematica(int idCarga) {
         super("Cinemática");
         this.idPartidaACargar = idCarga;
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        // ✅ COMO TU JUEGO ORIGINAL:
-        // Barra de titulo arriba, maximizado, sin barra de tareas abajo
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setResizable(false);
-
         setLayout(new BorderLayout());
 
         jfxPanel = new JFXPanel();
         add(jfxPanel, BorderLayout.CENTER);
 
+        // Reproduce el video en JavaFX
         Platform.runLater(() -> {
             try {
                 File mediaFile = new File(RUTA_VIDEO);
-
                 Media media = new Media(mediaFile.toURI().toString());
                 mediaPlayer = new MediaPlayer(media);
                 mediaView = new MediaView(mediaPlayer);
@@ -68,17 +59,17 @@ public class Cinematica extends JFrame {
 
                 mediaPlayer.play();
 
+                // Al terminar el video, abre el juego
                 mediaPlayer.setOnEndOfMedia(() -> {
                     SwingUtilities.invokeLater(() -> {
                         dispose();
-                        // 🌟 IMPORTANTE: Pasamos el ID de la partida a la clase Juego
                         new Juego(this.idPartidaACargar); 
                     });
                 });
 
             } catch (Exception e) {
                 System.out.println("Error al cargar video: " + e.getMessage());
-                // Si falla el video, saltamos directamente al juego.
+                // Si falla, pasa directo al juego
                 SwingUtilities.invokeLater(() -> {
                     dispose();
                     new Juego(this.idPartidaACargar);
@@ -87,21 +78,13 @@ public class Cinematica extends JFrame {
         });
     }
 
-    /**
-     * 🏆 MÉTODO REQUERIDO: Inicia la cinemática.
-     * Esto resuelve el error "The method iniciar() is undefined".
-     */
+    // Muestra la ventana y arranca la cinemática
     public void iniciar() {
-        // En tu código, el constructor ya inicia casi todo,
-        // pero setVisible(true) es lo que hace visible la ventana.
-        // Lo movemos aquí para responder a la llamada `new Cinematica().iniciar();`
         setVisible(true);
     }
-    
-    // -----------------------------------------------------------
 
+    // Test rápido
     public static void main(String[] args) {
-        // Si se ejecuta directamente, inicia una nueva cinemática (nueva partida)
         SwingUtilities.invokeLater(() -> new Cinematica().iniciar()); 
     }
 }
