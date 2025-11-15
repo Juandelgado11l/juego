@@ -17,7 +17,9 @@ public class Tablero extends JPanel implements Runnable {
     private int xFondo = 0;
     private int xSuelo = 0;
     private int velocidadY = 0;
+    final String mensajeCastillo = "¡Camino al final!";
     private final int gravedad = 2;
+    private boolean espacioDespuesJefe9 = false;
     private final int fuerzaSalto = -37;
     private boolean enAire = false;
     private boolean partidaCargada = false;
@@ -66,11 +68,17 @@ public class Tablero extends JPanel implements Runnable {
     private boolean castilloTocado = false; // Nueva bandera para saber si el jugador "entró"
     private long tiempoInicioCastillo = 0;
     private final int DURACION_IMAGEN_CASTILLO = 4000; // Duración de la imagen fija (3 segundos)
-    private boolean jefe9Derrotado = false;
-    private final int SCROLL_CASTILLO_TRIGGER = 7000;  
+    private boolean castilloActivado = false;
     private boolean juegoIniciado = false;
     private int idPartidaACargar = -1;
+    // Variables para el mensaje temporal del Power-Up
+    private long tiempoInicioMensaje = 0;
+    private final long DURACION_MENSAJE = 2000; // El mensaje se mostrará por 2 segundos (2000 ms)
     private PartidaDAO partidaDAO = new PartidaDAO();
+    // Variables de Clase necesarias para esta lógica
+    private final int DURACION_MENSAJE_MS = 3000; // 3 segundos
+    private String mensajePowerUp = "";
+// Si las tienes, no necesitas agregarlas de nuevo
     int x = getWidth() / 5;
     private boolean posicionForzada = false;
 
@@ -236,60 +244,97 @@ public class Tablero extends JPanel implements Runnable {
     }
 
     @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
+protected void paintComponent(Graphics g) {
+    super.paintComponent(g);
 
-        if (mostrandoCastillo) {
-        dibujarCastillo(g);
+    if (!cinematicaTerminada) {
+        dibujarCinematica(g);
         return;
     }
 
-        if (!cinematicaTerminada) {
-            dibujarCinematica(g);
-            return;
-        }
+    int altoSuelo = 20;
+    int ySuelo = getHeight() - altoSuelo;
 
-        int altoSuelo = 20;
-        int ySuelo = getHeight() - altoSuelo;
+    g.drawImage(fondo, xFondo, 0, getWidth(), getHeight(), this);
+    g.drawImage(fondo, xFondo + getWidth(), 0, getWidth(), getHeight(), this);
 
-        g.drawImage(fondo, xFondo, 0, getWidth(), getHeight(), this);
-        g.drawImage(fondo, xFondo + getWidth(), 0, getWidth(), getHeight(), this);
+    g.drawImage(suelo, xSuelo, ySuelo, getWidth(), altoSuelo, this);
+    g.drawImage(suelo, xSuelo + getWidth(), ySuelo, getWidth(), altoSuelo, this);
 
-        g.drawImage(suelo, xSuelo, ySuelo, getWidth(), altoSuelo, this);
-        g.drawImage(suelo, xSuelo + getWidth(), ySuelo, getWidth(), altoSuelo, this);
+    g.drawImage(gifUI, 10, 10, 100, 100, this);
+    g.setColor(Color.WHITE);
+    g.setFont(new Font("Arial", Font.BOLD, 50));
+    g.drawString(String.valueOf(contador), 115, 80);
 
-        g.drawImage(gifUI, 10, 10, 100, 100, this);
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 50));
-        g.drawString(String.valueOf(contador), 115, 80);
+    
+    if (mostrandoCastillo && tiempoInicioCastillo > 0) {
+        // Asumiendo que dibujarCastillo(g) usa g.drawImage(imagenCastillo, 0, 0, width, height, this)
+        dibujarCastillo(g); 
+        return;
+        // Opcional: Si quieres dibujar un texto de "Pausa" o "Felicidades", añádelo aquí.
+    }
+    
 
-        if (vida != null) {
-            final int X_VIDA = getWidth() - 260;
-            final int Y_VIDA = 20;
-            vida.dibujar(g, X_VIDA, Y_VIDA);
-        }
+    if (vida != null) {
+        final int X_VIDA = getWidth() - 260;
+        final int Y_VIDA = 20;
+        vida.dibujar(g, X_VIDA, Y_VIDA);
+    }
 
-        synchronized (enemigos) {
-            for (Obstaculos o : enemigos) {
-                o.dibujar(g);
-                o.dibujarBarraVida(g);
-            }
-        }
-
-        synchronized (proyectilesEnemigos) {
-            for (Proyectil p : proyectilesEnemigos) {
-                p.dibujar(g);
-            }
-        }
-
-        if (caballeroC != null) {
-            caballeroC.dibujar(g, this.esInvulnerable, this.lastUpdateTime, this);
-        }
-
-        synchronized (rosas) {
-            for (Rosa r : rosas) r.dibujar(g);
+    synchronized (enemigos) {
+        for (Obstaculos o : enemigos) {
+            o.dibujar(g);
+            o.dibujarBarraVida(g);
         }
     }
+
+    synchronized (proyectilesEnemigos) {
+        for (Proyectil p : proyectilesEnemigos) {
+            p.dibujar(g);
+        }
+    }
+
+    if (caballeroC != null) {
+        caballeroC.dibujar(g, this.esInvulnerable, this.lastUpdateTime, this);
+    }
+
+    synchronized (rosas) {
+        for (Rosa r : rosas) r.dibujar(g);
+    }
+    
+    // ======================================================
+    // 💥 NUEVA LÓGICA: DIBUJAR MENSAJE DE POWER-UP 💥
+    // ======================================================
+
+    long tiempoActual = System.currentTimeMillis();
+    long tiempoTranscurrido = tiempoActual - tiempoInicioMensaje;
+
+    // 1. Verificar si el mensaje debe mostrarse
+    if (tiempoTranscurrido < DURACION_MENSAJE_MS && !mensajePowerUp.isEmpty()) {
+        
+        // 2. Configurar el estilo del texto (Color/Fuente para el Power-Up)
+        g.setColor(new Color(255, 215, 0)); // Dorado/Amarillo llamativo
+        g.setFont(new Font("Impact", Font.BOLD, 48)); // Fuente grande y de impacto
+        
+        // 3. Calcular la posición para centrar el texto
+        FontMetrics fm = g.getFontMetrics();
+        int anchoTexto = fm.stringWidth(mensajePowerUp);
+        int alturaTexto = fm.getHeight();
+        
+        // Posición X centrada
+        int x = (getWidth() - anchoTexto) / 2;
+        // Posición Y cerca del centro
+        int y = (getHeight() / 2) + (alturaTexto / 2); 
+        
+        // 4. (Opcional) Dibuja una sombra para que resalte
+        g.setColor(Color.BLACK);
+        g.drawString(mensajePowerUp, x + 3, y + 3);
+
+        // 5. Dibujar el texto principal
+        g.setColor(new Color(255, 215, 0)); // Dorado/Amarillo
+        g.drawString(mensajePowerUp, x, y);
+    }
+}
 
     private void dibujarCinematica(Graphics g) {
         g.setColor(Color.BLACK);
@@ -301,42 +346,79 @@ public class Tablero extends JPanel implements Runnable {
             mostrarPantallaControles(g);
             return;
         }
+        if (mensajePowerUp != null) {
+        g.setColor(Color.YELLOW); 
+        g.setFont(new Font("Arial", Font.BOLD, 40)); 
+        
+        // Centrar el texto en la pantalla:
+        int x = getWidth() / 2 - (g.getFontMetrics().stringWidth(mensajePowerUp) / 2);
+        int y = getHeight() / 2;
+        
+        g.drawString(mensajePowerUp, x, y);
+    }
     }
     // **********************************************
 // PASO 3.2: NUEVO MÉTODO PARA DIBUJAR EL CASTILLO
 // **********************************************
 private void dibujarCastillo(Graphics g) {
-    // Rellena el fondo de negro (pausa del juego)
-    g.setColor(Color.BLACK);
-    g.fillRect(0, 0, getWidth(), getHeight());
-
-    // NOTA: Usamos fondoCastilloImagen, que es la variable donde se cargó la imagen.
-    if (imagenCastillo != null) { 
-        // Centrar la imagen del castillo
-        // Usamos getWidth(this) y getHeight(this) si la variable es de tipo Image (java.awt)
-        int x = (getWidth() - imagenCastillo.getWidth(this)) / 2;
-        int y = (getHeight() - imagenCastillo.getHeight(this)) / 2;
-
-        g.drawImage(imagenCastillo, x, y, this);
+    
+    // -------------------------------------------------------------
+    // 1. CÁLCULO DE POSICIÓN PARA EL CASTILLO
+    // -------------------------------------------------------------
+    int wCastle = 0;
+    int hCastle = 0;
+    
+    if (imagenCastillo != null) {
+        wCastle = imagenCastillo.getWidth(this);
+        hCastle = imagenCastillo.getHeight(this);
     }
     
-    // Controlamos el tiempo de la pausa visual dentro del método, 
-    // pero la lógica principal de la cinemática sigue en actualizar().
+    // Posición X del castillo: Anclado al extremo derecho.
+    // El margen de 10px es opcional para que no esté pegado al borde.
+    final int xCastleDraw = getWidth() - wCastle - 10; 
+    
+    // Posición Y del castillo: Centrado verticalmente, o puedes anclarlo al suelo.
+    // Si quieres que la base del castillo esté en el suelo (ySuelo):
+    final int ALTURA_SUELO = 20; // Asegúrate de que esta constante sea accesible.
+    final int yCastleDraw = getHeight() - ALTURA_SUELO - hCastle; 
+    // Si quieres que esté centrado verticalmente: final int yCastleDraw = (getHeight() - hCastle) / 2;
+    
+    
+    // -------------------------------------------------------------
+    // 2. DIBUJAR LA IMAGEN DEL CASTILLO ANCLADA A LA DERECHA
+    // -------------------------------------------------------------
+    if (imagenCastillo != null) { 
+        g.drawImage(imagenCastillo, xCastleDraw, yCastleDraw, this);
+    }
+    
+    
+    // -------------------------------------------------------------
+    // 3. DIBUJAR CABALLERO Y MENSAJE (Durante los 3 segundos de pausa)
+    // -------------------------------------------------------------
+    final int DURACION_IMAGEN_CASTILLO = 3000; // Asegúrate de que esta constante sea accesible.
     long tiempoTranscurrido = System.currentTimeMillis() - tiempoInicioCastillo;
     
-    // Dibujamos al personaje SOLO si ha pasado la pausa visual y no ha entrado aún.
-    if (caballeroC != null && !castilloTocado && tiempoTranscurrido > DURACION_IMAGEN_CASTILLO) {
+    if (caballeroC != null && tiempoTranscurrido < DURACION_IMAGEN_CASTILLO) {
         
-        // Dibuja al personaje
+        // Posicionar al Caballero a la izquierda de la puerta del castillo
+        int xCaballero = xCastleDraw - caballeroC.getAncho() - 20; // 20px a la izquierda del castillo
+        int yCaballero = getHeight() - ALTURA_SUELO - caballeroC.getAlto();
+        
+        // Actualiza las coordenadas del caballero para el dibujado
+        caballeroC.setX(xCaballero); 
+        caballeroC.setY(yCaballero);
+        
         caballeroC.dibujar(g, this.esInvulnerable, this.lastUpdateTime, this);
         
-        // Dibuja un mensaje para el jugador
-        g.setColor(Color.RED);
-        g.setFont(new Font("Arial", Font.BOLD, 30));
-        g.drawString("¡Entra al castillo!", getWidth() / 2 - 120, getHeight() - 50);
+        // Posicionar el mensaje de forma relativa al castillo
+        g.setColor(Color.YELLOW);
+        g.setFont(new Font("Impact", Font.BOLD, 48));
+        g.drawString(mensajeCastillo, xCastleDraw - 250, yCastleDraw + hCastle / 2);
+        // 3. Dibujar el Texto Principal (Dorado/Amarillo)
+        g.setColor(new Color(255, 215, 0)); // Color Dorado
+        g.drawString(mensajeCastillo, xCastleDraw, yCastleDraw);
     }
 }
-
     private long tiempoControles = 6000;
     private long inicioControles;
 
@@ -361,7 +443,7 @@ private void mostrarPantallaControles(Graphics g) {
     g.drawString("Izquierda: A", x, y + 40);
     g.drawString("Derecha: D", x, y + 80);
     g.drawString("Pegar: P", x, y + 120);
-
+    
     // Esperar el tiempo completo antes de iniciar el juego
     if (System.currentTimeMillis() - inicioControles >= tiempoControles) {
         cinematicaTerminada = true;
@@ -374,13 +456,24 @@ private void mostrarPantallaControles(Graphics g) {
             enAire = false;
             velocidadY = 0;
         }
+        
 
         iniciarBucleJuego(); // Se llama solo una vez después de los 6s
     }
+    
 }
 
 public void actualizar() {
-    
+      final int alturaSuelo = 20;
+
+
+      // Lógica para limpiar el mensaje temporal (después de 2 segundos)
+        if (mensajePowerUp.isEmpty()) {
+        if (System.currentTimeMillis() - tiempoInicioMensaje > DURACION_MENSAJE) {
+            mensajePowerUp = ""; // Limpia el mensaje.
+            tiempoInicioMensaje = 0;
+        }
+    }
     // ------------------------------------------------------------------
     // LÓGICA DE ORDEN Y POSICIONAMIENTO INICIAL (EXISTENTE)
     // ------------------------------------------------------------------
@@ -399,18 +492,39 @@ public void actualizar() {
     if (caballeroC == null) return;
     
     // ------------------------------------------------------------------
-    // PASO A: ACTIVACIÓN DE LA PANTALLA DEL CASTILLO (NUEVO)
-    // Se activa cuando el jugador recoge la Rosa 9 (contador >= 9) y alcanza el límite de scroll.
+    // PASO A: LÓGICA DE PAUSA DE 3 SEGUNDOS AL MOSTRAR EL CASTILLO (REESTRUCTURADO)
+    // Detiene todo el juego por 3 segundos para mostrar la imagen estática.
     // ------------------------------------------------------------------
-    if (contador >= 9 && !castilloTocado && !mostrandoCastillo) {
-        
-        final int LIMITE_SCROLL_CASTILLO = 6000; // Define el punto de scroll donde debe aparecer
+    if (mostrandoCastillo) {
+        long tiempoMostrado = System.currentTimeMillis() - tiempoInicioCastillo;
+        if (tiempoMostrado < 3000) {
+            return; 
+        } else {
+            try {
+                fondo = new ImageIcon(getClass().getResource("/img/fondo4.png")).getImage();
+                suelo = new ImageIcon(getClass().getResource("/img/suelo4.png")).getImage();
+                System.out.println("FONDO Y SUELO CAMBIADOS A fase final (fondo4/suelo4)");
+            } catch (Exception e) {
+                System.err.println("ERROR cargando fondo4/suelo4: " + e.getMessage());
+            }
+            tiempoInicioCastillo = 0;
+            jefeActivo = false; // reactivar generación normal (hasta que se encuentre la puerta)
+        }
+    }
 
-        if (xLimiteIzquierdo >= LIMITE_SCROLL_CASTILLO) { 
-            
-            mostrandoCastillo = true;
+    // ----------------------------------------------------
+    // ESPACIO DESPUÉS DEL JEFE 9: ACTIVACIÓN DE LA PANTALLA DEL CASTILLO
+    // Si el Jefe 9 fue derrotado y estamos en el 'espacio de espera', este bloque chequea la distancia.
+    // ----------------------------------------------------
+    if (espacioDespuesJefe9) {
+        // Define la distancia que debe recorrer el jugador antes de mostrar el castillo
+        final int DISTANCIA_CASTILLO = 500; // ejemplo, ajusta según tu nivel
+        if (xLimiteIzquierdo >= DISTANCIA_CASTILLO) {
+            mostrandoCastillo = true; // Activa la bandera y entra en la lógica de pausa (arriba) y control (abajo)
             tiempoInicioCastillo = System.currentTimeMillis();
-            posicionForzada = false; 
+            posicionForzada = false; // Prepara el re-posicionamiento forzado
+            espacioDespuesJefe9 = false; // Ya no necesitamos esperar
+            System.out.println("✅ PANTALLA DEL CASTILLO INICIADA.");
             
             try {
                 // Cargar la imagen del CASTILLO (la pantalla estática que pausa el juego)
@@ -418,41 +532,26 @@ public void actualizar() {
             } catch (Exception e) {
                 System.err.println("ERROR cargando fondo del castillo: " + e.getMessage());
             }
-            
-            System.out.println("✅ PANTALLA DEL CASTILLO INICIADA.");
         }
     }
 
     // ------------------------------------------------------------------
-    // PASO B: CONTROL DE LA PANTALLA DEL CASTILLO (NUEVO)
-    // Este bloque maneja la pausa y la entrada al jefe final.
+    // PASO B: CONTROL DE LA PANTALLA DEL CASTILLO (MOVIMIENTO SIN SCROLL)
+    // Se ejecuta inmediatamente después de la pausa de 3s.
     // ------------------------------------------------------------------
     if (mostrandoCastillo) {
-        final int alturaSuelo = 20; 
-        long tiempoTranscurrido = System.currentTimeMillis() - tiempoInicioCastillo;
-        
-        // 1. Manejar el tiempo de la pausa inicial de la imagen
-        if (tiempoTranscurrido <= DURACION_IMAGEN_CASTILLO) {
-            return;
-        }
-
         // 2. Forzar la posición del jugador al inicio del control de la pantalla
         if (!posicionForzada) {
             caballeroC.setX(getWidth() / 2 - 250); 
             caballeroC.setY(getHeight() - alturaSuelo - caballeroC.getAlto()); 
-            
             caballeroC.setVelocidadX(0);
             caballeroC.setSaltando(false);
-            
             xFondo = 0;
             xSuelo = 0;
-            
             posicionForzada = true;
         }
-        
+
         // 3. Lógica de movimiento, salto y gravedad básica (SIN SCROLL)
-        
-        // 3a. Actualizar estado y gravedad/salto
         caballeroC.actualizarEstado(controles); 
 
         if (enAire) {
@@ -499,26 +598,10 @@ public void actualizar() {
         
         if (caballeroC.getRect().intersects(rectEntrada)) {
             castilloTocado = true; 
-            
-            // Transición al ambiente final (¡Carga fondo5 y suelo5!)
-            try {
-                fondo = new ImageIcon(getClass().getResource("/img/fondo5.png")).getImage();
-                suelo = new ImageIcon(getClass().getResource("/img/suelo5.png")).getImage();
-                System.out.println("Transición al encuentro final: fondo5.png y suelo5.png");
-            } catch (Exception e) {
-                System.err.println("ERROR cargando imágenes de transición (5): " + e.getMessage());
-            }
-
-            generarJefe(VAMPIRO_SPRITE, ALTO_VAMPIRO, VIDA_JEFE_FINAL);
-            // Generar la Rosa 10 (la rosa final)
-            
-            
-            // Terminar la Pantalla del Castillo y activar el modo jefe
-            mostrandoCastillo = false;
-            jefeActivo = true; 
-            posicionForzada = false; 
-            
-            // Posicionar al jugador en la nueva pantalla
+           generarJefe(VAMPIRO_SPRITE, ALTO_VAMPIRO, VIDA_JEFE_FINAL);
+            mostrandoCastillo = false; // Termina el modo castillo
+            jefeActivo = true; // Activa el modo jefe
+            posicionForzada = false; // Prepara la posición normal si es necesario
             caballeroC.setX(50);
             caballeroC.setY(getHeight() - alturaSuelo - caballeroC.getAlto());
         }
@@ -809,72 +892,73 @@ private void manejarAtaque() {
                 sonido.reproducirSonido("golpe");
 
                 if (o.estaDestruido()) {
-                    // --- LÓGICA DE JEFES Y RECOMPENSAS ---
-                    
-                    // LÓGICA ESPECIAL PARA EL JEFE DEL CONTADOR 9 (Caballero Oscuro)
-                    if (nombreSprite.contains(CABALLERO_SPRITE) && contador == 9) {
-                        
-                        it.remove(); // Se remueve el Caballero Oscuro inmediatamente
-                        jefeActivo = true; // Mantiene la generación de obstáculos y rosas desactivada
-                        
-                        // **********************************************
-                        // PASO 2: ACTIVACIÓN DE LA IMAGEN DEL CASTILLO
-                        // **********************************************
-                        mostrandoCastillo = true; 
-                        tiempoInicioCastillo = System.currentTimeMillis(); 
-                        posicionForzada = false; // Permite forzar la posición del jugador delante del castillo
-                        
-                        System.out.println("Jefe 9 Derrotado. Mostrando imagen del Castillo...");
-                        return; // Detiene la iteración y el método para evitar errores de concurrencia y reanudación prematura
-                    } 
-                    
-                    // Lógica para Jefes 3 y 6
-                    if (nombreSprite.contains(GARGOLA_SPRITE)) {
-                        caballeroC.desbloquearDobleSalto(); 
-                        if (contador == 3) { 
+
+                    // ======================================================
+                    //   JEFE 9 → MOSTRAR CASTILLO
+                    // ======================================================
+                   if (nombreSprite.contains(CABALLERO_SPRITE) && contador == 9) {
+                        mostrandoCastillo = true; // <-- ACTIVACIÓN INMEDIATA
+                            jefeActivo = false; // pausamos generación de obstáculos
+                            posicionForzada = true; // Usamos esto para iniciar la pausa estática
+                            tiempoInicioCastillo = System.currentTimeMillis(); // ⬅️ AÑADIR ESTO
+                            try {
+                      imagenCastillo = new ImageIcon(getClass().getResource("/img/castillo.png")).getImage();
+                                } catch (Exception e) {
+                         System.err.println("ERROR cargando fondo del castillo: " + e.getMessage());
+                         }
+                            }
+                    // ======================================================
+                    // JEFES 3 y 6
+                    // ======================================================
+                    else if (nombreSprite.contains(GARGOLA_SPRITE)) {
+                        caballeroC.desbloquearDobleSalto();
+
+                        if (contador == 3) {
                             try {
                                 fondo = new ImageIcon(getClass().getResource("/img/fondo2.png")).getImage();
-                                suelo = new ImageIcon(getClass().getResource("/img/suelo2.png")).getImage(); 
-                                System.out.println("FONDO Y SUELO CAMBIADOS: fondo2.png y suelo2.png");
+                                suelo = new ImageIcon(getClass().getResource("/img/suelo2.png")).getImage();
+                                System.out.println("Ambiente cambiado: fondo2/suelo2");
+                                this.mensajePowerUp = "¡Doble Salto Desbloqueado!"; 
+                                this.tiempoInicioMensaje = System.currentTimeMillis();
                             } catch (Exception e) {
-                                System.err.println("ERROR cargando imágenes de transición (2): " + e.getMessage());
-                            }
-                        }
-                    } else if (nombreSprite.contains(NEBLINA_SPRITE)) {
-                        caballeroC.aumentarVelocidad(1); 
-                        if (contador == 6) { 
-                            try {
-                                fondo = new ImageIcon(getClass().getResource("/img/fondo3.png")).getImage();
-                                suelo = new ImageIcon(getClass().getResource("/img/suelo3.png")).getImage(); 
-                                System.out.println("FONDO Y SUELO CAMBIADOS: fondo3.png y suelo3.png");
-                            } catch (Exception e) {
-                                System.err.println("ERROR cargando imágenes de transición (3): " + e.getMessage());
+                                System.err.println("Error cargando fondo2/suelo2: " + e.getMessage());
                             }
                         }
                     }
-                    
-                    // El cambio de ambiente a fondo4/suelo4 se ejecutará si el jefe 9 (Caballero Oscuro) no tiene sprite y se basa solo en el contador. 
-                    // Ya que arriba pusimos una lógica específica para CABALLERO_SPRITE, esta lógica de fondo4/suelo4 podría moverse o depender solo del contador, según tu diseño:
-                     if (contador == 9 && !nombreSprite.contains(GARGOLA_SPRITE) && !nombreSprite.contains(NEBLINA_SPRITE)) {
-                         try {
-                             fondo = new ImageIcon(getClass().getResource("/img/fondo4.png")).getImage();
-                             suelo = new ImageIcon(getClass().getResource("/img/suelo4.png")).getImage(); 
-                             System.out.println("FONDO Y SUELO CAMBIADOS: fondo4.png y suelo4.png");
-                         } catch (Exception e) {
-                             System.err.println("ERROR cargando imágenes de transición (4): " + e.getMessage());
-                         }
-                     }
-                    
-                    // --- FIN LÓGICA DE JEFES Y RECOMPENSAS ---
+                    else if (nombreSprite.contains(NEBLINA_SPRITE)) {
 
-                    it.remove(); // Remueve el obstáculo/jefe
+                        caballeroC.aumentarVelocidad(1);
+
+                        if (contador == 6) {
+                            try {
+                                fondo = new ImageIcon(getClass().getResource("/img/fondo3.png")).getImage();
+                                suelo = new ImageIcon(getClass().getResource("/img/suelo3.png")).getImage();
+                                System.out.println("Ambiente cambiado: fondo3/suelo3");
+                                this.mensajePowerUp = "¡Velocidad x2!";
+                                this.tiempoInicioMensaje = System.currentTimeMillis();
+                            } catch (Exception e) {
+                                System.err.println("Error cargando fondo3/suelo3: " + e.getMessage());
+                            }
+                        }
+                    }
+
+                    // ======================================================
+                    //   CAMBIO A fondo4/suelo4 SOLO SI NO ES JEFE 9
+                    // ======================================================
+                 
+
+                    // ======================================================
+                    // FIN DEL JEFE
+                    // ======================================================
+                    it.remove();
 
                     if (jefeActivo && enemigos.isEmpty()) {
                         jefeActivo = false;
                         ultimoXObstaculoFijo = getWidth() + 10;
                         ultimoXObstaculoMovil = getWidth() + 10;
-                        System.out.println("JEFE DERROTADO. Generación de obstáculos y rosas reanudada.");
+                        System.out.println("Jefe derrotado → reanudando generación.");
                     }
+
                 }
             }
         }
