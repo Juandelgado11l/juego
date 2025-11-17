@@ -9,8 +9,8 @@ public class Obstaculos {
     // Propiedades de Posición y Visuales
     private int x;
     private int y;
-    private int ancho;  
-    private int alto;   
+    private int ancho;    
+    private int alto;    
     private Image sprite; 
     private String nombreImagen; 
 
@@ -20,9 +20,16 @@ public class Obstaculos {
     private boolean esMovil = false;
     private int velocidadMovil = 2; 
 
+    // PROPIEDADES AÑADIDAS PARA JEFES
+    private boolean esJefe = false;
+    private boolean mirandoDerecha = true; // Dirección por defecto para proyectiles/animaciones
+
     // Cooldown de Ataque
     private long tiempoUltimoAtaque = 0;
-    private final long COOLDOWN_ATAQUE = 1200; 
+    // COOLDOWN DEFAULT (Enredadera)
+    private long COOLDOWN_ATAQUE = 1200; 
+    
+    
     private boolean estaAtacandoAnimacion = false;
     private long finAnimacionAtaque = 0;
 
@@ -40,7 +47,6 @@ public class Obstaculos {
             this.ancho = 100;
             this.alto = 100;
         } else {
-            // Este tamaño aplica a jefes, enredaderas y plantas sin vida base
             this.ancho = 200;
             this.alto = 200;
         }
@@ -57,7 +63,6 @@ public class Obstaculos {
         this.esMovil = esMovil;
         cargarSprite(rutaSprite);
 
-        // Se usa el mismo tamaño base, pero se puede ajustar en Tablero.
         if (esMovil) {
             this.ancho = 100;
             this.alto = 100;
@@ -70,8 +75,9 @@ public class Obstaculos {
         this.vidaActual = vidaInicial;
     }
     
-    // CONSTRUCTOR 3 - Obstáculo con vida sin ser Movil (Jefes, Objetos destructibles)
-    public Obstaculos(int x, int y, String rutaSprite, int vidaInicial, boolean esMovil, int ancho, int alto) {
+    // CONSTRUCTOR 3 - Obstáculo con vida (Jefes, Objetos destructibles)
+    // AÑADIDO: esJefe para marcar explícitamente a los Jefes
+    public Obstaculos(int x, int y, String rutaSprite, int vidaInicial, boolean esMovil, int ancho, int alto, boolean esJefe) {
         this.x = x;
         this.y = y;
         this.nombreImagen = rutaSprite;
@@ -82,8 +88,14 @@ public class Obstaculos {
 
         this.vidaMaxima = vidaInicial;
         this.vidaActual = vidaInicial;
+        this.esJefe = esJefe; // Establecer la bandera de Jefe
+
+       
     }
 
+    public boolean esJefe(int numero) {
+    return numero == 3 || numero == 6 || numero == 9;
+    }
 
     public void setY(int y) {
         this.y = y;
@@ -93,7 +105,7 @@ public class Obstaculos {
         try {
             this.sprite = new ImageIcon(getClass().getResource(rutaSprite)).getImage();
         } catch (Exception e) {
-            System.err.println("Error cargando sprite para Obstáculo: " + e.getMessage());
+            System.err.println("Error cargando sprite para Obstáculo: " + rutaSprite + " - " + e.getMessage());
             this.sprite = new ImageIcon().getImage(); 
         }
     }
@@ -101,6 +113,7 @@ public class Obstaculos {
     public void dibujar(Graphics g) {
         g.drawImage(sprite, x, y, ancho, alto, null);
 
+        // Animación de ataque (un simple círculo rojo parpadeante)
         if (estaAtacandoAnimacion && System.currentTimeMillis() < finAnimacionAtaque) {
             g.setColor(new Color(255, 0, 0, 100));
             g.fillOval(x - 10, y - 10, ancho + 20, alto + 20);
@@ -126,13 +139,7 @@ public class Obstaculos {
             g.drawRect(x, barraY, barraAncho, barraAlto);
         }
     }
-
-    // El único propósito aquí es el cleanup. El movimiento se hace en mover().
-    public void actualizarEstado() {
-        if (x + ancho < 0) {
-            activo = false; // Desactivarlo si sale de la pantalla
-        }
-    }
+    
 
     // Movimiento de scroll propio del obstáculo (SOLO MÓVILES)
     public void mover() {
@@ -216,5 +223,18 @@ public class Obstaculos {
 
     public String getNombreImagen() {
         return nombreImagen;
+    }
+    
+    // MÉTODOS AÑADIDOS
+    public boolean isJefe() {
+        return esJefe;
+    }
+    
+    public boolean isMirandoDerecha() {
+        return mirandoDerecha;
+    }
+
+    public void setMirandoDerecha(boolean mirandoDerecha) {
+        this.mirandoDerecha = mirandoDerecha;
     }
 }

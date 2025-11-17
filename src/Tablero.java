@@ -56,8 +56,8 @@ public class Tablero extends JPanel implements Runnable {
     private final int VIDA_JEFE_FINAL = 200; 
     private final int ALTO_GARGOLA = 200; 
     private final int ALTO_NEBLINA = 150; 
-    private final int ALTO_CABALLERO = 220; 
-    private final int ALTO_VAMPIRO = 250; 
+    private final int ALTO_CABALLERO = 200; 
+    private final int ALTO_VAMPIRO = 200; 
     private final String GARGOLA_SPRITE = "/img/gargola.gif"; 
     private final String NEBLINA_SPRITE = "/img/neblina.gif"; 
     private final String CABALLERO_SPRITE = "/img/caballero_oscuro.gif"; 
@@ -67,8 +67,6 @@ public class Tablero extends JPanel implements Runnable {
     private boolean mostrandoCastillo = false;
     private boolean castilloTocado = false; // Nueva bandera para saber si el jugador "entró"
     private long tiempoInicioCastillo = 0;
-    private final int DURACION_IMAGEN_CASTILLO = 4000; // Duración de la imagen fija (3 segundos)
-    private boolean castilloActivado = false;
     private boolean juegoIniciado = false;
     private int idPartidaACargar = -1;
     // Variables para el mensaje temporal del Power-Up
@@ -81,7 +79,7 @@ public class Tablero extends JPanel implements Runnable {
 // Si las tienes, no necesitas agregarlas de nuevo
     int x = getWidth() / 5;
     private boolean posicionForzada = false;
-
+    private final int ALTURA_GRAFICA_SUELO = 20;
     public Tablero(int idPartidaACargar) {
         setBackground(Color.BLACK);
         setFocusable(true);
@@ -178,7 +176,7 @@ public class Tablero extends JPanel implements Runnable {
         caballeroC.setY            (datos[5]);
         this.cinematicaTerminada = (datos[6] == 1);
         this.partidaCargada = true;
-
+        aplicarAmbienteActual();
         System.out.println("Partida cargada: cinematicaTerminada=" + this.cinematicaTerminada);
 
         return true;
@@ -242,6 +240,9 @@ public class Tablero extends JPanel implements Runnable {
             }
         }
     }
+    private int getYInicioSuelo() {
+    return getHeight() - ALTURA_GRAFICA_SUELO;
+}
 
     @Override
 protected void paintComponent(Graphics g) {
@@ -252,14 +253,14 @@ protected void paintComponent(Graphics g) {
         return;
     }
 
-    int altoSuelo = 20;
-    int ySuelo = getHeight() - altoSuelo;
+     int ALTURA_GRAFICA_SUELO = 20; // Nueva constante centralizada    
+    int ySuelo = getHeight() - ALTURA_GRAFICA_SUELO;
 
     g.drawImage(fondo, xFondo, 0, getWidth(), getHeight(), this);
     g.drawImage(fondo, xFondo + getWidth(), 0, getWidth(), getHeight(), this);
 
-    g.drawImage(suelo, xSuelo, ySuelo, getWidth(), altoSuelo, this);
-    g.drawImage(suelo, xSuelo + getWidth(), ySuelo, getWidth(), altoSuelo, this);
+    g.drawImage(suelo, xSuelo, ySuelo, getWidth(), ALTURA_GRAFICA_SUELO, this);
+    g.drawImage(suelo, xSuelo + getWidth(), ySuelo, getWidth(), ALTURA_GRAFICA_SUELO, this);
 
     g.drawImage(gifUI, 10, 10, 100, 100, this);
     g.setColor(Color.WHITE);
@@ -464,8 +465,7 @@ private void mostrarPantallaControles(Graphics g) {
 }
 
 public void actualizar() {
-      final int alturaSuelo = 20;
-
+ final int ALTURA_GRAFICA_SUELO = 20; // Nueva constante centralizada
 
       // Lógica para limpiar el mensaje temporal (después de 2 segundos)
         if (mensajePowerUp.isEmpty()) {
@@ -543,7 +543,7 @@ public void actualizar() {
         // 2. Forzar la posición del jugador al inicio del control de la pantalla
         if (!posicionForzada) {
             caballeroC.setX(getWidth() / 2 - 250); 
-            caballeroC.setY(getHeight() - alturaSuelo - caballeroC.getAlto()); 
+            caballeroC.setY(getHeight() - ALTURA_GRAFICA_SUELO - caballeroC.getAlto()); 
             caballeroC.setVelocidadX(0);
             caballeroC.setSaltando(false);
             xFondo = 0;
@@ -559,7 +559,7 @@ public void actualizar() {
             caballeroC.setY(caballeroC.getY() + velocidadY);
         }
 
-        int ySuelo = getHeight() - alturaSuelo - caballeroC.getAlto();
+        int ySuelo = getHeight() - ALTURA_GRAFICA_SUELO - caballeroC.getAlto();
         if (caballeroC.getY() >= ySuelo) {
             caballeroC.setY(ySuelo);
             enAire = false;
@@ -603,7 +603,7 @@ public void actualizar() {
             jefeActivo = true; // Activa el modo jefe
             posicionForzada = false; // Prepara la posición normal si es necesario
             caballeroC.setX(50);
-            caballeroC.setY(getHeight() - alturaSuelo - caballeroC.getAlto());
+            caballeroC.setY(getHeight() - ALTURA_GRAFICA_SUELO - caballeroC.getAlto());
         }
         
         return; // Detiene el resto de la lógica del juego (NO-SCROLL)
@@ -702,7 +702,7 @@ public void actualizar() {
 
     moverObstaculosMoviles();
 
-    for (Obstaculos o : enemigos) o.actualizarEstado();
+    for (Obstaculos o : enemigos);
 
     moverProyectiles();
     generarProyectilesEnemigos();
@@ -864,7 +864,7 @@ private void actualizarRosas() {
     // Nota: NO reseteamos ultimoXRosa aquí: lo manejas en generarRosas()
 }
 
-private void manejarAtaque() {
+   private void manejarAtaque() {
     int ataqueX = caballeroC.getX() + (caballeroC.isMirandoDerecha() ? caballeroC.getAncho() - 10 : -ATAQUE_ANCHO + 10);
     int ataqueY = caballeroC.getY() + (caballeroC.getAlto() / 2) - (ATAQUE_ALTO / 2);
 
@@ -896,17 +896,17 @@ private void manejarAtaque() {
                     // ======================================================
                     //   JEFE 9 → MOSTRAR CASTILLO
                     // ======================================================
-                   if (nombreSprite.contains(CABALLERO_SPRITE) && contador == 9) {
+                    if (nombreSprite.contains(CABALLERO_SPRITE) && contador == 9) {
                         mostrandoCastillo = true; // <-- ACTIVACIÓN INMEDIATA
-                            jefeActivo = false; // pausamos generación de obstáculos
-                            posicionForzada = true; // Usamos esto para iniciar la pausa estática
-                            tiempoInicioCastillo = System.currentTimeMillis(); // ⬅️ AÑADIR ESTO
-                            try {
-                      imagenCastillo = new ImageIcon(getClass().getResource("/img/castillo.png")).getImage();
-                                } catch (Exception e) {
-                         System.err.println("ERROR cargando fondo del castillo: " + e.getMessage());
-                         }
-                            }
+                        jefeActivo = false; // pausamos generación de obstáculos
+                        posicionForzada = true; // Usamos esto para iniciar la pausa estática
+                        tiempoInicioCastillo = System.currentTimeMillis(); 
+                        try {
+                            imagenCastillo = new ImageIcon(getClass().getResource("/img/castillo.png")).getImage();
+                        } catch (Exception e) {
+                            System.err.println("ERROR cargando fondo del castillo: " + e.getMessage());
+                        }
+                    }
                     // ======================================================
                     // JEFES 3 y 6
                     // ======================================================
@@ -914,15 +914,11 @@ private void manejarAtaque() {
                         caballeroC.desbloquearDobleSalto();
 
                         if (contador == 3) {
-                            try {
-                                fondo = new ImageIcon(getClass().getResource("/img/fondo2.png")).getImage();
-                                suelo = new ImageIcon(getClass().getResource("/img/suelo2.png")).getImage();
-                                System.out.println("Ambiente cambiado: fondo2/suelo2");
-                                this.mensajePowerUp = "¡Doble Salto Desbloqueado!"; 
-                                this.tiempoInicioMensaje = System.currentTimeMillis();
-                            } catch (Exception e) {
-                                System.err.println("Error cargando fondo2/suelo2: " + e.getMessage());
-                            }
+                            // La carga del fondo se mueve a aplicarAmbienteActual()
+                            aplicarAmbienteActual(); 
+                            System.out.println("Ambiente cambiado: fondo2/suelo2");
+                            this.mensajePowerUp = "¡Doble Salto Desbloqueado!"; 
+                            this.tiempoInicioMensaje = System.currentTimeMillis();
                         }
                     }
                     else if (nombreSprite.contains(NEBLINA_SPRITE)) {
@@ -930,22 +926,13 @@ private void manejarAtaque() {
                         caballeroC.aumentarVelocidad(1);
 
                         if (contador == 6) {
-                            try {
-                                fondo = new ImageIcon(getClass().getResource("/img/fondo3.png")).getImage();
-                                suelo = new ImageIcon(getClass().getResource("/img/suelo3.png")).getImage();
-                                System.out.println("Ambiente cambiado: fondo3/suelo3");
-                                this.mensajePowerUp = "¡Velocidad x2!";
-                                this.tiempoInicioMensaje = System.currentTimeMillis();
-                            } catch (Exception e) {
-                                System.err.println("Error cargando fondo3/suelo3: " + e.getMessage());
-                            }
+                            // La carga del fondo se mueve a aplicarAmbienteActual()
+                            aplicarAmbienteActual(); 
+                            System.out.println("Ambiente cambiado: fondo3/suelo3");
+                            this.mensajePowerUp = "¡Velocidad x2!";
+                            this.tiempoInicioMensaje = System.currentTimeMillis();
                         }
                     }
-
-                    // ======================================================
-                    //   CAMBIO A fondo4/suelo4 SOLO SI NO ES JEFE 9
-                    // ======================================================
-                 
 
                     // ======================================================
                     // FIN DEL JEFE
@@ -958,10 +945,63 @@ private void manejarAtaque() {
                         ultimoXObstaculoMovil = getWidth() + 10;
                         System.out.println("Jefe derrotado → reanudando generación.");
                     }
-
                 }
             }
         }
+    }
+}
+private void aplicarAmbienteActual() {
+    String rutaFondo;
+    String rutaSuelo;
+    int contadorActual = Tablero.contador;
+
+    // 1. Caso Especial: Si el contador es 9 (o más) y la partida ya cargó (o terminó) la cinemática del jefe final, 
+    //    cargamos el ambiente 4.
+    if (contadorActual >= 9 && this.cinematicaTerminada) {
+        rutaFondo = "/img/fondo4.png";
+        rutaSuelo = "/img/suelo4.png";
+        System.out.println("Cargando Ambiente: fondo4/suelo4 (Post-Castillo)");
+    } 
+    // 2. Si el contador es 9 y la cinemática NO ha terminado, 
+    //    podríamos asumir que la partida debe iniciar en la secuencia del castillo.
+    else if (contadorActual >= 9 && !this.cinematicaTerminada) { 
+        // ¡IMPORTANTE! Esto asume que tienes una variable de control para la cinemática del castillo.
+        // Si no existe, usa la que activa la cinemática (en tu código anterior era `mostrandoCastillo`).
+        this.mostrandoCastillo = true; 
+        this.jefeActivo = false;
+        this.posicionForzada = true;
+        try {
+            // Se debe cargar la imagen del castillo.
+            imagenCastillo = new ImageIcon(getClass().getResource("/img/castillo.png")).getImage();
+            System.out.println("Cargando Ambiente: ESTADO CASTILLO FINAL (Cinemática)");
+        } catch (Exception e) {
+             System.err.println("ERROR cargando fondo del castillo: " + e.getMessage());
+        }
+        return; 
+    }
+    // 3. Casos estándar para los ambientes 3 y 2
+    else if (contadorActual >= 6) {
+        rutaFondo = "/img/fondo3.png";
+        rutaSuelo = "/img/suelo3.png";
+        System.out.println("Cargando Ambiente: fondo3/suelo3");
+    } else if (contadorActual >= 3) {
+        rutaFondo = "/img/fondo2.png";
+        rutaSuelo = "/img/suelo2.png";
+        System.out.println("Cargando Ambiente: fondo2/suelo2");
+    } 
+    // 4. Caso inicial (0-2)
+    else {
+        rutaFondo = "/img/fondo1.png";
+        rutaSuelo = "/img/suelo1.png";
+        System.out.println("Cargando Ambiente: fondo1/suelo1 (predeterminado)");
+    }
+    
+    // Cargar las imágenes estándar (se evita si se cargó el castillo)
+    try {
+        fondo = new ImageIcon(getClass().getResource(rutaFondo)).getImage();
+        suelo = new ImageIcon(getClass().getResource(rutaSuelo)).getImage();
+    } catch (Exception e) {
+        System.err.println("Error al aplicar ambiente: " + e.getMessage());
     }
 }
 
@@ -994,8 +1034,7 @@ private void generarObstaculosMoviles() {
         Obstaculos obst = new Obstaculos(xPosicion, 0, "/img/obstaculo.gif", true);
 
         // Colocar a nivel del suelo según su alto
-        obst.setY(getHeight() - 20 - obst.getAlto());
-
+        obst.setY(getYInicioSuelo() - obst.getAlto());
         enemigos.add(obst);
         ultimoXObstaculoMovil = xPosicion;
         obstaculosMovilesConsecutivos++;
@@ -1021,8 +1060,7 @@ private void generarObstaculosInmoviles() {
         }
 
         // Colocar a nivel del suelo
-        obst.setY(getHeight() - 20 - obst.getAlto());
-
+        obst.setY(getYInicioSuelo() - obst.getAlto());
         enemigos.add(obst);
 
         // Actualizar la posición del último obstáculo generado
