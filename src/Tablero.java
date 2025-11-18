@@ -80,6 +80,7 @@ public class Tablero extends JPanel implements Runnable {
     int x = getWidth() / 5;
     private boolean posicionForzada = false;
     private final int ALTURA_GRAFICA_SUELO = 20;
+    
     public Tablero(int idPartidaACargar) {
         setBackground(Color.BLACK);
         setFocusable(true);
@@ -863,12 +864,12 @@ private void actualizarRosas() {
     } // fin while
     // Nota: NO reseteamos ultimoXRosa aquí: lo manejas en generarRosas()
 }
-
-   private void manejarAtaque() {
+private void manejarAtaque() {
+    // Cálculo del Hitbox de ataque del Caballero
     int ataqueX = caballeroC.getX() + (caballeroC.isMirandoDerecha() ? caballeroC.getAncho() - 10 : -ATAQUE_ANCHO + 10);
     int ataqueY = caballeroC.getY() + (caballeroC.getAlto() / 2) - (ATAQUE_ALTO / 2);
 
-    Rectangle ataqueHitbox = new Rectangle(ataqueX, ataqueY, ATAQUE_ANCHO, ATAQUE_ALTO);
+    Rectangle ataqueHitbox = new Rectangle(ataqueX, ataqueY, ATAQUE_ALTO, ATAQUE_ALTO);
 
     Iterator<Obstaculos> it = enemigos.iterator();
     while (it.hasNext()) {
@@ -894,12 +895,42 @@ private void actualizarRosas() {
                 if (o.estaDestruido()) {
 
                     // ======================================================
-                    //   JEFE 9 → MOSTRAR CASTILLO
+                    // 🛑 JEFE FINAL → MOSTRAR CINEMÁTICA FINAL (VAMPIRO)
                     // ======================================================
-                    if (nombreSprite.contains(CABALLERO_SPRITE) && contador == 9) {
-                        mostrandoCastillo = true; // <-- ACTIVACIÓN INMEDIATA
-                        jefeActivo = false; // pausamos generación de obstáculos
-                        posicionForzada = true; // Usamos esto para iniciar la pausa estática
+                    if (nombreSprite.contains(VAMPIRO_SPRITE) && castilloTocado) {
+                        
+                        System.out.println("✅ ¡VAMPIRO DERROTADO! Cerrando juego principal y preparando cinemática.");
+                        
+                        // 1. FORZAR CIERRE ROBUTSO de la ventana del juego
+                        try {
+                             // Obtiene el JFrame padre y lo cierra (dispose())
+                             JFrame juegoFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+                             if (juegoFrame != null) {
+                                 juegoFrame.dispose(); 
+                                 // Pausa para asegurar que el sistema operativo registre el cierre antes de abrir la nueva ventana.
+                                 Thread.sleep(150); 
+                             }
+                        } catch (Exception e) {
+                             System.err.println("Error al intentar cerrar la ventana del juego: " + e.getMessage());
+                             e.printStackTrace();
+                        }
+
+                        // 2. Elimina al jefe
+                        it.remove(); 
+                        
+                        // 3. Inicia la cinemática final
+                        new CinematicaFinal().iniciar();
+                        
+                        return; // Detiene la actualización del juego
+                    }
+                    
+                    // ======================================================
+                    // Lógica para Jefes Anteriores (9, 3, 6)
+                    // ======================================================
+                    else if (nombreSprite.contains(CABALLERO_SPRITE) && contador == 9) {
+                        mostrandoCastillo = true; 
+                        jefeActivo = false;
+                        posicionForzada = true; 
                         tiempoInicioCastillo = System.currentTimeMillis(); 
                         try {
                             imagenCastillo = new ImageIcon(getClass().getResource("/img/castillo.png")).getImage();
@@ -907,43 +938,33 @@ private void actualizarRosas() {
                             System.err.println("ERROR cargando fondo del castillo: " + e.getMessage());
                         }
                     }
-                    // ======================================================
-                    // JEFES 3 y 6
-                    // ======================================================
                     else if (nombreSprite.contains(GARGOLA_SPRITE)) {
                         caballeroC.desbloquearDobleSalto();
-
                         if (contador == 3) {
-                            // La carga del fondo se mueve a aplicarAmbienteActual()
                             aplicarAmbienteActual(); 
-                            System.out.println("Ambiente cambiado: fondo2/suelo2");
                             this.mensajePowerUp = "¡Doble Salto Desbloqueado!"; 
                             this.tiempoInicioMensaje = System.currentTimeMillis();
                         }
                     }
                     else if (nombreSprite.contains(NEBLINA_SPRITE)) {
-
                         caballeroC.aumentarVelocidad(1);
-
                         if (contador == 6) {
-                            // La carga del fondo se mueve a aplicarAmbienteActual()
                             aplicarAmbienteActual(); 
-                            System.out.println("Ambiente cambiado: fondo3/suelo3");
                             this.mensajePowerUp = "¡Velocidad x2!";
                             this.tiempoInicioMensaje = System.currentTimeMillis();
                         }
                     }
 
                     // ======================================================
-                    // FIN DEL JEFE
+                    // FIN DEL JEFE (LÓGICA GENÉRICA para enemigos normales)
                     // ======================================================
                     it.remove();
 
                     if (jefeActivo && enemigos.isEmpty()) {
                         jefeActivo = false;
+                        // Reposiciona los generadores de obstáculos
                         ultimoXObstaculoFijo = getWidth() + 10;
                         ultimoXObstaculoMovil = getWidth() + 10;
-                        System.out.println("Jefe derrotado → reanudando generación.");
                     }
                 }
             }
