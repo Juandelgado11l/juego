@@ -531,11 +531,11 @@ public void actualizar() {
                 // Cargar la imagen del CASTILLO (la pantalla estática que pausa el juego)
                 imagenCastillo = new ImageIcon(getClass().getResource("/img/castillo.png")).getImage();
             } catch (Exception e) {
-                System.err.println("ERROR cargando fondo del castillo: " + e.getMessage());
+                System.err.println("ERROR cargando fondo del casppppptillo: " + e.getMessage());
             }
         }
     }
-
+     
     // ------------------------------------------------------------------
     // PASO B: CONTROL DE LA PANTALLA DEL CASTILLO (MOVIMIENTO SIN SCROLL)
     // Se ejecuta inmediatamente después de la pausa de 3s.
